@@ -8,7 +8,7 @@ format:
 
 ::: {.hero-section}
 
-# Your Project Title Here {.title}
+# Your Project Title Here {Matrix}
 
 ::: {.subtitle}
 A catchy one-line description of your project
@@ -16,9 +16,9 @@ A catchy one-line description of your project
 
 ::: {.author-list}
 
-[**Author One**](https://example.com)^1^,
-[**Author Two**](https://example.com)^2^,
-[**Author Three**](https://example.com)^1,2^
+[**Praise Daniels**](https://example.com)^1^,
+[**Sanath Nair**](https://example.com)^2^,
+[**Aryan**](https://example.com)^1,2^
 
 :::
 
