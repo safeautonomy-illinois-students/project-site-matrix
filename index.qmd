@@ -1,5 +1,5 @@
 ---
-pagetitle: "Your Project Title"
+pagetitle: "Matrix: Autonomous Robotaxi Summoning"
 format:
   html:
     toc: false
@@ -8,250 +8,99 @@ format:
 
 ::: {.hero-section}
 
-# Your Project Title Here {Matrix}
+# Project Matrix: Autonomous Robotaxi Summoning {Matrix}
 
 ::: {.subtitle}
-A catchy one-line description of your project
+A Full-Stack Autonomy Pipeline for the Polaris GEM e2: From GPS Summoning to Precision Parking
 :::
 
 ::: {.author-list}
-
-[**Praise Daniels**](https://example.com)^1^,
-[**Sanath Nair**](https://example.com)^2^,
-[**Aryan**](https://example.com)^1,2^
-
+[**Praise Daniels**](https://www.linkedin.com/in/praise-daniels-b732b91b8/)^1^,
+[**Sanath Nair**](https://www.linkedin.com/in/sanathnair09/)^1^,
+[**Aryan Chauhan**](https://www.linkedin.com/in/aryan-chauhan-/)^1^,
+[**Prachit Gupta**](https://www.linkedin.com/in/prachit-gupta-60a210240/)^1^
 :::
 
 ::: {.affiliation-list}
-
-^1^University Name,  ^2^Research Lab / Company
-
+^1^University of Illinois Urbana-Champaign | ECE 484: Principles of Safe Autonomy
 :::
 
 ::: {.button-row}
-
-[[{{< fa file-pdf >}} Paper]{.btn-text}](https://arxiv.org/pdf/XXXX.XXXXX){.btn .btn-primary}
-[[{{< fa brands arxiv >}} arXiv]{.btn-text}](https://arxiv.org/abs/XXXX.XXXXX){.btn .btn-primary}
-[[{{< fa video >}} Video]{.btn-text}](https://www.youtube.com/watch?v=cSQTZoZPJzs){.btn .btn-primary}
-[[{{< fa brands github >}} Code]{.btn-text}](https://github.com/){.btn .btn-primary}
-[[{{< fa database >}} Data]{.btn-text}](https://example.com){.btn .btn-primary}
-
+[[{{< fa file-pdf >}} Technical Report]{.btn-text}](docs/report.pdf){.btn .btn-primary}
+[[{{< fa video >}} Simulation Demo]{.btn-text}](#video){.btn .btn-primary}
+[[{{< fa brands github >}} Codebase]{.btn-text}](https://github.com/safeautonomy-illinois-students/project-site-matrix){.btn .btn-primary}
 :::
 
 :::
-
-
-<!-- ============================================================ -->
-<!-- TEASER IMAGE / VIDEO -->
-<!-- ============================================================ -->
 
 ::: {.section-container}
+## Technical Architecture {.section-title}
 
-::: {.hero-teaser}
-
-<!-- Option A: Use a static image as the teaser -->
-![Teaser figure showing your method overview or key result.](static/images/placeholder-teaser.svg){.teaser-img}
-
-<!-- Option B: Embed a video teaser (uncomment below, comment out image above)
-{{< video static/videos/teaser.mp4 >}}
--->
-
-:::
-
-:::
+Our implementation decomposes the "Summon" challenge into four integrated functional pillars, ensuring a seamless transition from a stationary parking state to active autonomous navigation.
 
 
-<!-- ============================================================ -->
-<!-- ABSTRACT -->
-<!-- ============================================================ -->
-
-::: {.section-container}
-
-## Abstract {.section-title}
-
-::: {.abstract-text}
-Replace this text with your project abstract. Describe the problem you are
-solving, the key insight or contribution of your work, and the main results.
-Keep it concise — typically 150–250 words. You can use **bold** and *italic*
-formatting to emphasize key terms.
-
-For example: We present a novel approach to [task] that achieves
-state-of-the-art results on [benchmark]. Our method leverages [key technique]
-to overcome [limitation of prior work]. Experiments demonstrate that our
-approach outperforms existing methods by [metric improvement] while requiring
-[efficiency gain].
-:::
-
-:::
-
-
-<!-- ============================================================ -->
-<!-- OVERVIEW / METHOD VIDEO -->
-<!-- ============================================================ -->
-
-::: {.section-container}
-
-## Video {.section-title}
-
-::: {.video-container}
-<!-- Replace with your YouTube or local video embed -->
-{{< video https://www.youtube.com/embed/cSQTZoZPJzs >}}
-:::
-
-:::
-
-
-<!-- ============================================================ -->
-<!-- RESULTS GALLERY -->
-<!-- ============================================================ -->
-
-::: {.section-container}
-
-## Results {.section-title}
-
-::: {.content-text}
-Provide a brief description of the results shown below. Explain what the
-reader should observe and why it matters.
-:::
 
 ::: {.results-grid}
 
 ::: {.result-card}
-![Result 1 caption](static/images/placeholder-result1.svg)
+### 🧠 Perception & BEV Mapping
+The system processes raw camera feeds through a **Neural Segmentation Network** to identify drivable regions. This is followed by an **Inverse Perspective Mapping (IPM)** to generate a Bird's Eye View (BEV), allowing for precise geometric road-line fitting and spatial awareness.
 :::
 
 ::: {.result-card}
-![Result 2 caption](static/images/placeholder-result2.svg)
+### 🗺️ Navigation & Path Planning
+A **Global Planner** processes GPS coordinates received from the summon app to determine optimal routing and initial vehicle heading. The **Local Planner** then generates real-time waypoints that bridge the gap between the parking spot and the main driving lanes.
 :::
 
 ::: {.result-card}
-![Result 3 caption](static/images/placeholder-result3.svg)
+### 🏎️ MPC & Dynamic Control
+The core control layer utilizes **Model Predictive Control (MPC)** to track waypoints. It solves an optimization problem at every time step, balancing vehicle dynamics with hard safety constraints to ensure the car remains centered in the drivable region while managing longitudinal velocity.
+:::
+
+::: {.result-card}
+### 🛡️ Sensor Fusion & Safety
+Safety is enforced through a **Multi-Modal Fusion** of Lidar and Stereo camera data. This module performs real-time object detection (cones/obstacles) and utilizes **YOLO** for stop-sign recognition, enabling automatic "stop-and-resume" behavior based on environmental clearance.
 :::
 
 :::
-
 :::
 
-
-<!-- ============================================================ -->
-<!-- QUALITATIVE COMPARISONS -->
-<!-- ============================================================ -->
 
 ::: {.section-container}
-
-## Qualitative Comparisons {.section-title}
+## Safe Control Framework {.section-title}
 
 ::: {.content-text}
-Describe the comparison setup — which baselines are you comparing against, and
-what should the reader look for in the side-by-side results.
+To ensure the vehicle stays within the drivable region, we utilize Model Predictive Control (MPC). The control input $u$ is derived by minimizing a cost function $J$ subject to vehicle dynamics and environmental constraints:
+
+$$J = \sum_{t=0}^{T} \|x_t - x_{ref,t}\|^2_Q + \|u_t\|^2_R$$
+
+**Safety Constraints:**
+- **Drivable Region:** $\forall t, x_t \in \mathcal{X}_{free}$
+- **Obstacle Avoidance:** $\|x_t - x_{obs}\| > d_{min}$
+- **Precision Goal:** $\|x_T - x_{goal}\| \leq 2m$
 :::
-
-::: {.comparison-grid}
-
-::: {.comparison-item}
-![Ours](static/images/placeholder-ours.svg)
-
-**Ours**
 :::
-
-::: {.comparison-item}
-![Baseline A](static/images/placeholder-baseline.svg)
-
-**Baseline A**
-:::
-
-:::
-
-:::
-
-
-<!-- ============================================================ -->
-<!-- INTERACTIVE SLIDER (Optional) -->
-<!-- ============================================================ -->
 
 ::: {.section-container}
+## Project Roadmap {.section-title}
 
-## Interpolation Demo {.section-title}
-
-::: {.content-text}
-If your method supports interpolation or continuous control, you can add an
-interactive slider here. The example below shows how to set one up.
-:::
-
-::: {.interpolation-panel}
-
-::: {.interpolation-endpoints}
-![Start](static/images/placeholder-start.svg){.endpoint-img}
-
-![End](static/images/placeholder-end.svg){.endpoint-img}
-:::
-
-<input type="range" min="0" max="100" value="50" class="interpolation-slider" id="interpolation-slider">
-<div id="interpolation-value" class="interpolation-value">50%</div>
-
-<script>
-  const slider = document.getElementById('interpolation-slider');
-  const display = document.getElementById('interpolation-value');
-  slider.addEventListener('input', function() {
-    display.textContent = this.value + '%';
-  });
-</script>
+| Stage | Milestone | Status |
+|-------|-----------|--------|
+| **01** | **Simulation Baseline** | ✅ Complete |
+| **02** | **Lane Following (IRL)** | 🏗️ In Progress |
+| **03** | **Park-to-Drive Integration** | 📅 Upcoming |
+| **04** | **Full System Launch** | 📅 May 2026 |
 
 :::
-
-:::
-
-
-<!-- ============================================================ -->
-<!-- RELATED WORK -->
-<!-- ============================================================ -->
 
 ::: {.section-container}
+## Full System Demo {#video .section-title}
 
-## Related Work {.section-title}
-
-::: {.content-text}
-
-Here are some related works in this area:
-
-- [Related Paper 1](https://example.com) introduces an idea similar to ours for [topic].
-- [Related Paper 2](https://example.com) also addresses [problem] using [approach].
-- [Related Paper 3](https://example.com) proposes [technique] which is complementary to our method.
-
-Check out [this survey](https://example.com) for a comprehensive overview of the field.
+::: {.video-container}
+{{< video https://www.youtube.com/embed/cSQTZoZPJzs >}}
 :::
-
 :::
-
-
-<!-- ============================================================ -->
-<!-- BIBTEX -->
-<!-- ============================================================ -->
-
-::: {.section-container}
-
-## BibTeX {.section-title}
-
-```bibtex
-@article{yourname2026project,
-  author    = {Author One and Author Two and Author Three},
-  title     = {Your Project Title Here},
-  journal   = {Conference or Journal Name},
-  year      = {2026},
-}
-```
-
-:::
-
-
-<!-- ============================================================ -->
-<!-- FOOTER -->
-<!-- ============================================================ -->
 
 ::: {.site-footer}
-
-This website template is adapted from the
-[Nerfies](https://nerfies.github.io) project page, which is licensed under a
-[Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).
-
+This project was developed for **ECE 484: Principles of Safe Autonomy** at UIUC.
 :::

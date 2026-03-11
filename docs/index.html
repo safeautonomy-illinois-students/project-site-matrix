@@ -2,12 +2,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.27">
+<meta name="generator" content="quarto-1.9.30">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Your Project Title – Project Title</title>
+<title>Matrix: Autonomous Robotaxi Summoning – Project Title</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -22,41 +22,6 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
-}
-/* CSS for syntax highlighting */
-html { -webkit-text-size-adjust: 100%; }
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-  }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-div.sourceCode
-  {   }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -74,12 +39,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-adfb2833bc15652ec5881dc6381ea988.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-b6a8276bf55561bdbc268162d41bd1f7.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-26d9cc88ab9604001aabd73cb1ea1d8f.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
-<script src="site_libs/quarto-contrib/videojs/video.min.js"></script>
-<link href="site_libs/quarto-contrib/videojs/video-js.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-f26553168c513de9df5c6afef92bbe9b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <link href="site_libs/quarto-contrib/fontawesome6-6.7.2/all.min.css" rel="stylesheet">
 <link href="site_libs/quarto-contrib/fontawesome6-6.7.2/latex-fontsize.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
@@ -110,6 +73,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -164,190 +156,93 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<section id="your-project-title-here" class="level1 title hero-section">
-<h1 class="title">Your Project Title Here</h1>
+<section id="project-matrix-autonomous-robotaxi-summoning-matrix" class="level1 hero-section">
+<h1>Project Matrix: Autonomous Robotaxi Summoning {Matrix}</h1>
 <div class="subtitle">
-<p>A catchy one-line description of your project</p>
+<p>A Full-Stack Autonomy Pipeline for the Polaris GEM e2: From GPS Summoning to Precision Parking</p>
 </div>
 <div class="author-list">
-<p><a href="https://example.com"><strong>Author One</strong></a><sup>1</sup>, <a href="https://example.com"><strong>Author Two</strong></a><sup>2</sup>, <a href="https://example.com"><strong>Author Three</strong></a><sup>1,2</sup></p>
+<p><a href="https://www.linkedin.com/in/praise-daniels-b732b91b8/"><strong>Praise Daniels</strong></a><sup>1</sup>, <a href="https://www.linkedin.com/in/sanathnair09/"><strong>Sanath Nair</strong></a><sup>1</sup>, <a href="https://www.linkedin.com/in/aryan-chauhan-/"><strong>Aryan Chauhan</strong></a><sup>1</sup>, <a href="https://www.linkedin.com/in/prachit-gupta-60a210240/"><strong>Prachit Gupta</strong></a><sup>1</sup></p>
 </div>
 <div class="affiliation-list">
-<p><sup>1</sup>University Name, <sup>2</sup>Research Lab / Company</p>
+<p><sup>1</sup>University of Illinois Urbana-Champaign | ECE 484: Principles of Safe Autonomy</p>
 </div>
 <div class="button-row">
-<p><a href="https://arxiv.org/pdf/XXXX.XXXXX" class="btn btn-primary"><span class="btn-text"><i class="fa-solid fa-file-pdf" aria-label="file-pdf"></i> Paper</span></a> <a href="https://arxiv.org/abs/XXXX.XXXXX" class="btn btn-primary"><span class="btn-text"><i class="fa-brands fa-arxiv" aria-label="arxiv"></i> arXiv</span></a> <a href="https://www.youtube.com/watch?v=cSQTZoZPJzs" class="btn btn-primary"><span class="btn-text"><i class="fa-solid fa-video" aria-label="video"></i> Video</span></a> <a href="https://github.com/" class="btn btn-primary"><span class="btn-text"><i class="fa-brands fa-github" aria-label="github"></i> Code</span></a> <a href="https://example.com" class="btn btn-primary"><span class="btn-text"><i class="fa-solid fa-database" aria-label="database"></i> Data</span></a></p>
+<p><a href="docs/report.pdf" class="btn btn-primary"><span class="btn-text"><i class="fa-solid fa-file-pdf" aria-label="file-pdf"></i> Technical Report</span></a> <a href="#video" class="btn btn-primary"><span class="btn-text"><i class="fa-solid fa-video" aria-label="video"></i> Simulation Demo</span></a> <a href="https://github.com/safeautonomy-illinois-students/project-site-matrix" class="btn btn-primary"><span class="btn-text"><i class="fa-brands fa-github" aria-label="github"></i> Codebase</span></a></p>
 </div>
 </section>
-<!-- ============================================================ -->
-<!-- TEASER IMAGE / VIDEO -->
-<!-- ============================================================ -->
-<div class="section-container">
-<div class="hero-teaser">
-<!-- Option A: Use a static image as the teaser -->
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="static/images/placeholder-teaser.svg" class="teaser-img img-fluid figure-img"></p>
-<figcaption>Teaser figure showing your method overview or key result.</figcaption>
-</figure>
-</div>
-<!-- Option B: Embed a video teaser (uncomment below, comment out image above)
-
--->
-</div>
-</div>
-<!-- ============================================================ -->
-<!-- ABSTRACT -->
-<!-- ============================================================ -->
-<section id="abstract" class="level2 section-title section-container">
-<h2 class="section-title anchored" data-anchor-id="abstract">Abstract</h2>
-<div class="abstract-text">
-<p>Replace this text with your project abstract. Describe the problem you are solving, the key insight or contribution of your work, and the main results. Keep it concise — typically 150–250 words. You can use <strong>bold</strong> and <em>italic</em> formatting to emphasize key terms.</p>
-<p>For example: We present a novel approach to [task] that achieves state-of-the-art results on [benchmark]. Our method leverages [key technique] to overcome [limitation of prior work]. Experiments demonstrate that our approach outperforms existing methods by [metric improvement] while requiring [efficiency gain].</p>
+<section id="technical-architecture" class="level2 section-title section-container">
+<h2 class="section-title anchored" data-anchor-id="technical-architecture">Technical Architecture</h2>
+<p>Our implementation decomposes the “Summon” challenge into four integrated functional pillars, ensuring a seamless transition from a stationary parking state to active autonomous navigation.</p>
+<div class="results-grid">
+<section id="perception-bev-mapping" class="level3 result-card">
+<h3 class="anchored" data-anchor-id="perception-bev-mapping">🧠 Perception &amp; BEV Mapping</h3>
+<p>The system processes raw camera feeds through a <strong>Neural Segmentation Network</strong> to identify drivable regions. This is followed by an <strong>Inverse Perspective Mapping (IPM)</strong> to generate a Bird’s Eye View (BEV), allowing for precise geometric road-line fitting and spatial awareness.</p>
+</section>
+<section id="navigation-path-planning" class="level3 result-card">
+<h3 class="anchored" data-anchor-id="navigation-path-planning">🗺️ Navigation &amp; Path Planning</h3>
+<p>A <strong>Global Planner</strong> processes GPS coordinates received from the summon app to determine optimal routing and initial vehicle heading. The <strong>Local Planner</strong> then generates real-time waypoints that bridge the gap between the parking spot and the main driving lanes.</p>
+</section>
+<section id="mpc-dynamic-control" class="level3 result-card">
+<h3 class="anchored" data-anchor-id="mpc-dynamic-control">🏎️ MPC &amp; Dynamic Control</h3>
+<p>The core control layer utilizes <strong>Model Predictive Control (MPC)</strong> to track waypoints. It solves an optimization problem at every time step, balancing vehicle dynamics with hard safety constraints to ensure the car remains centered in the drivable region while managing longitudinal velocity.</p>
+</section>
+<section id="sensor-fusion-safety" class="level3 result-card">
+<h3 class="anchored" data-anchor-id="sensor-fusion-safety">🛡️ Sensor Fusion &amp; Safety</h3>
+<p>Safety is enforced through a <strong>Multi-Modal Fusion</strong> of Lidar and Stereo camera data. This module performs real-time object detection (cones/obstacles) and utilizes <strong>YOLO</strong> for stop-sign recognition, enabling automatic “stop-and-resume” behavior based on environmental clearance.</p>
+</section>
 </div>
 </section>
-<!-- ============================================================ -->
-<!-- OVERVIEW / METHOD VIDEO -->
-<!-- ============================================================ -->
+<section id="safe-control-framework" class="level2 section-title section-container">
+<h2 class="section-title anchored" data-anchor-id="safe-control-framework">Safe Control Framework</h2>
+<div class="content-text">
+<p>To ensure the vehicle stays within the drivable region, we utilize Model Predictive Control (MPC). The control input <span class="math inline">\(u\)</span> is derived by minimizing a cost function <span class="math inline">\(J\)</span> subject to vehicle dynamics and environmental constraints:</p>
+<p><span class="math display">\[J = \sum_{t=0}^{T} \|x_t - x_{ref,t}\|^2_Q + \|u_t\|^2_R\]</span></p>
+<p><strong>Safety Constraints:</strong> - <strong>Drivable Region:</strong> <span class="math inline">\(\forall t, x_t \in \mathcal{X}_{free}\)</span> - <strong>Obstacle Avoidance:</strong> <span class="math inline">\(\|x_t - x_{obs}\| &gt; d_{min}\)</span> - <strong>Precision Goal:</strong> <span class="math inline">\(\|x_T - x_{goal}\| \leq 2m\)</span></p>
+</div>
+</section>
+<section id="project-roadmap" class="level2 section-title section-container">
+<h2 class="section-title anchored" data-anchor-id="project-roadmap">Project Roadmap</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Stage</th>
+<th>Milestone</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>01</strong></td>
+<td><strong>Simulation Baseline</strong></td>
+<td>✅ Complete</td>
+</tr>
+<tr class="even">
+<td><strong>02</strong></td>
+<td><strong>Lane Following (IRL)</strong></td>
+<td>🏗️ In Progress</td>
+</tr>
+<tr class="odd">
+<td><strong>03</strong></td>
+<td><strong>Park-to-Drive Integration</strong></td>
+<td>📅 Upcoming</td>
+</tr>
+<tr class="even">
+<td><strong>04</strong></td>
+<td><strong>Full System Launch</strong></td>
+<td>📅 May 2026</td>
+</tr>
+</tbody>
+</table>
+</section>
 <section id="video" class="level2 section-title section-container">
-<h2 class="section-title anchored" data-anchor-id="video">Video</h2>
+<h2 class="section-title anchored" data-anchor-id="video">Full System Demo</h2>
 <div class="video-container">
-<!-- Replace with your YouTube or local video embed -->
 <div class="quarto-video ratio ratio-16x9"><iframe data-external="1" src="https://www.youtube.com/embed/cSQTZoZPJzs" title="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe></div>
 </div>
 </section>
-<!-- ============================================================ -->
-<!-- RESULTS GALLERY -->
-<!-- ============================================================ -->
-<section id="results" class="level2 section-title section-container">
-<h2 class="section-title anchored" data-anchor-id="results">Results</h2>
-<div class="content-text">
-<p>Provide a brief description of the results shown below. Explain what the reader should observe and why it matters.</p>
-</div>
-<div class="results-grid">
-<div class="result-card">
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="static/images/placeholder-result1.svg" class="img-fluid figure-img"></p>
-<figcaption>Result 1 caption</figcaption>
-</figure>
-</div>
-</div>
-<div class="result-card">
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="static/images/placeholder-result2.svg" class="img-fluid figure-img"></p>
-<figcaption>Result 2 caption</figcaption>
-</figure>
-</div>
-</div>
-<div class="result-card">
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="static/images/placeholder-result3.svg" class="img-fluid figure-img"></p>
-<figcaption>Result 3 caption</figcaption>
-</figure>
-</div>
-</div>
-</div>
-</section>
-<!-- ============================================================ -->
-<!-- QUALITATIVE COMPARISONS -->
-<!-- ============================================================ -->
-<section id="qualitative-comparisons" class="level2 section-title section-container">
-<h2 class="section-title anchored" data-anchor-id="qualitative-comparisons">Qualitative Comparisons</h2>
-<div class="content-text">
-<p>Describe the comparison setup — which baselines are you comparing against, and what should the reader look for in the side-by-side results.</p>
-</div>
-<div class="comparison-grid">
-<div class="comparison-item">
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="static/images/placeholder-ours.svg" class="img-fluid figure-img"></p>
-<figcaption>Ours</figcaption>
-</figure>
-</div>
-<p><strong>Ours</strong></p>
-</div>
-<div class="comparison-item">
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="static/images/placeholder-baseline.svg" class="img-fluid figure-img"></p>
-<figcaption>Baseline A</figcaption>
-</figure>
-</div>
-<p><strong>Baseline A</strong></p>
-</div>
-</div>
-</section>
-<!-- ============================================================ -->
-<!-- INTERACTIVE SLIDER (Optional) -->
-<!-- ============================================================ -->
-<section id="interpolation-demo" class="level2 section-title section-container">
-<h2 class="section-title anchored" data-anchor-id="interpolation-demo">Interpolation Demo</h2>
-<div class="content-text">
-<p>If your method supports interpolation or continuous control, you can add an interactive slider here. The example below shows how to set one up.</p>
-</div>
-<div class="interpolation-panel">
-<div class="interpolation-endpoints">
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="static/images/placeholder-start.svg" class="endpoint-img img-fluid figure-img"></p>
-<figcaption>Start</figcaption>
-</figure>
-</div>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="static/images/placeholder-end.svg" class="endpoint-img img-fluid figure-img"></p>
-<figcaption>End</figcaption>
-</figure>
-</div>
-</div>
-<input type="range" min="0" max="100" value="50" class="interpolation-slider" id="interpolation-slider">
-<div id="interpolation-value" class="interpolation-value">
-50%
-</div>
-<script>
-  const slider = document.getElementById('interpolation-slider');
-  const display = document.getElementById('interpolation-value');
-  slider.addEventListener('input', function() {
-    display.textContent = this.value + '%';
-  });
-</script>
-</div>
-</section>
-<!-- ============================================================ -->
-<!-- RELATED WORK -->
-<!-- ============================================================ -->
-<section id="related-work" class="level2 section-title section-container">
-<h2 class="section-title anchored" data-anchor-id="related-work">Related Work</h2>
-<div class="content-text">
-<p>Here are some related works in this area:</p>
-<ul>
-<li><a href="https://example.com">Related Paper 1</a> introduces an idea similar to ours for [topic].</li>
-<li><a href="https://example.com">Related Paper 2</a> also addresses [problem] using [approach].</li>
-<li><a href="https://example.com">Related Paper 3</a> proposes [technique] which is complementary to our method.</li>
-</ul>
-<p>Check out <a href="https://example.com">this survey</a> for a comprehensive overview of the field.</p>
-</div>
-</section>
-<!-- ============================================================ -->
-<!-- BIBTEX -->
-<!-- ============================================================ -->
-<section id="bibtex" class="level2 section-title section-container">
-<h2 class="section-title anchored" data-anchor-id="bibtex">BibTeX</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bibtex code-with-copy"><code class="sourceCode bibtex"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="va">@article</span>{<span class="ot">yourname2026project</span>,</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">author</span>    = {Author One and Author Two and Author Three},</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">title</span>     = {Your Project Title Here},</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">journal</span>   = {Conference or Journal Name},</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">year</span>      = {2026},</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<!-- ============================================================ -->
-<!-- FOOTER -->
-<!-- ============================================================ -->
 <div class="site-footer">
-<p>This website template is adapted from the <a href="https://nerfies.github.io">Nerfies</a> project page, which is licensed under a <a href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International License</a>.</p>
+<p>This project was developed for <strong>ECE 484: Principles of Safe Autonomy</strong> at UIUC.</p>
 </div>
 
 
@@ -754,7 +649,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   });
   </script>
 </div> <!-- /content -->
-<script>videojs(video_shortcode_videojs_video1);</script>
 
 
 

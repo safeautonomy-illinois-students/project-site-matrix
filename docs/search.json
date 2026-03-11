@@ -2,57 +2,36 @@
   {
     "objectID": "index.html",
     "href": "index.html",
-    "title": "Your Project Title Here",
+    "title": "Project Matrix: Autonomous Robotaxi Summoning {Matrix}",
     "section": "",
-    "text": "A catchy one-line description of your project\n\n\nAuthor One1, Author Two2, Author Three1,2\n\n\n1University Name, 2Research Lab / Company\n\n\n Paper  arXiv  Video  Code  Data"
+    "text": "A Full-Stack Autonomy Pipeline for the Polaris GEM e2: From GPS Summoning to Precision Parking\n\n\nPraise Daniels1, Sanath Nair1, Aryan Chauhan1, Prachit Gupta1\n\n\n1University of Illinois Urbana-Champaign | ECE 484: Principles of Safe Autonomy\n\n\n Technical Report  Simulation Demo  Codebase"
   },
   {
-    "objectID": "index.html#abstract",
-    "href": "index.html#abstract",
-    "title": "Your Project Title Here",
-    "section": "Abstract",
-    "text": "Abstract\n\nReplace this text with your project abstract. Describe the problem you are solving, the key insight or contribution of your work, and the main results. Keep it concise — typically 150–250 words. You can use bold and italic formatting to emphasize key terms.\nFor example: We present a novel approach to [task] that achieves state-of-the-art results on [benchmark]. Our method leverages [key technique] to overcome [limitation of prior work]. Experiments demonstrate that our approach outperforms existing methods by [metric improvement] while requiring [efficiency gain]."
+    "objectID": "index.html#technical-architecture",
+    "href": "index.html#technical-architecture",
+    "title": "Project Matrix: Autonomous Robotaxi Summoning {Matrix}",
+    "section": "Technical Architecture",
+    "text": "Technical Architecture\nOur implementation decomposes the “Summon” challenge into four integrated functional pillars, ensuring a seamless transition from a stationary parking state to active autonomous navigation.\n\n\n🧠 Perception & BEV Mapping\nThe system processes raw camera feeds through a Neural Segmentation Network to identify drivable regions. This is followed by an Inverse Perspective Mapping (IPM) to generate a Bird’s Eye View (BEV), allowing for precise geometric road-line fitting and spatial awareness.\n\n\n🗺️ Navigation & Path Planning\nA Global Planner processes GPS coordinates received from the summon app to determine optimal routing and initial vehicle heading. The Local Planner then generates real-time waypoints that bridge the gap between the parking spot and the main driving lanes.\n\n\n🏎️ MPC & Dynamic Control\nThe core control layer utilizes Model Predictive Control (MPC) to track waypoints. It solves an optimization problem at every time step, balancing vehicle dynamics with hard safety constraints to ensure the car remains centered in the drivable region while managing longitudinal velocity.\n\n\n🛡️ Sensor Fusion & Safety\nSafety is enforced through a Multi-Modal Fusion of Lidar and Stereo camera data. This module performs real-time object detection (cones/obstacles) and utilizes YOLO for stop-sign recognition, enabling automatic “stop-and-resume” behavior based on environmental clearance."
+  },
+  {
+    "objectID": "index.html#safe-control-framework",
+    "href": "index.html#safe-control-framework",
+    "title": "Project Matrix: Autonomous Robotaxi Summoning {Matrix}",
+    "section": "Safe Control Framework",
+    "text": "Safe Control Framework\n\nTo ensure the vehicle stays within the drivable region, we utilize Model Predictive Control (MPC). The control input \\(u\\) is derived by minimizing a cost function \\(J\\) subject to vehicle dynamics and environmental constraints:\n\\[J = \\sum_{t=0}^{T} \\|x_t - x_{ref,t}\\|^2_Q + \\|u_t\\|^2_R\\]\nSafety Constraints: - Drivable Region: \\(\\forall t, x_t \\in \\mathcal{X}_{free}\\) - Obstacle Avoidance: \\(\\|x_t - x_{obs}\\| &gt; d_{min}\\) - Precision Goal: \\(\\|x_T - x_{goal}\\| \\leq 2m\\)"
+  },
+  {
+    "objectID": "index.html#project-roadmap",
+    "href": "index.html#project-roadmap",
+    "title": "Project Matrix: Autonomous Robotaxi Summoning {Matrix}",
+    "section": "Project Roadmap",
+    "text": "Project Roadmap\n\n\n\nStage\nMilestone\nStatus\n\n\n\n\n01\nSimulation Baseline\n✅ Complete\n\n\n02\nLane Following (IRL)\n🏗️ In Progress\n\n\n03\nPark-to-Drive Integration\n📅 Upcoming\n\n\n04\nFull System Launch\n📅 May 2026"
   },
   {
     "objectID": "index.html#video",
     "href": "index.html#video",
-    "title": "Your Project Title Here",
-    "section": "Video",
-    "text": "Video"
-  },
-  {
-    "objectID": "index.html#results",
-    "href": "index.html#results",
-    "title": "Your Project Title Here",
-    "section": "Results",
-    "text": "Results\n\nProvide a brief description of the results shown below. Explain what the reader should observe and why it matters.\n\n\n\n\n\n\nResult 1 caption\n\n\n\n\n\n\n\nResult 2 caption\n\n\n\n\n\n\n\nResult 3 caption"
-  },
-  {
-    "objectID": "index.html#qualitative-comparisons",
-    "href": "index.html#qualitative-comparisons",
-    "title": "Your Project Title Here",
-    "section": "Qualitative Comparisons",
-    "text": "Qualitative Comparisons\n\nDescribe the comparison setup — which baselines are you comparing against, and what should the reader look for in the side-by-side results.\n\n\n\n\n\n\nOurs\n\n\nOurs\n\n\n\n\n\nBaseline A\n\n\nBaseline A"
-  },
-  {
-    "objectID": "index.html#interpolation-demo",
-    "href": "index.html#interpolation-demo",
-    "title": "Your Project Title Here",
-    "section": "Interpolation Demo",
-    "text": "Interpolation Demo\n\nIf your method supports interpolation or continuous control, you can add an interactive slider here. The example below shows how to set one up.\n\n\n\n\n\n\nStart\n\n\n\n\n\nEnd\n\n\n\n\n\n50%"
-  },
-  {
-    "objectID": "index.html#related-work",
-    "href": "index.html#related-work",
-    "title": "Your Project Title Here",
-    "section": "Related Work",
-    "text": "Related Work\n\nHere are some related works in this area:\n\nRelated Paper 1 introduces an idea similar to ours for [topic].\nRelated Paper 2 also addresses [problem] using [approach].\nRelated Paper 3 proposes [technique] which is complementary to our method.\n\nCheck out this survey for a comprehensive overview of the field."
-  },
-  {
-    "objectID": "index.html#bibtex",
-    "href": "index.html#bibtex",
-    "title": "Your Project Title Here",
-    "section": "BibTeX",
-    "text": "BibTeX\n@article{yourname2026project,\n  author    = {Author One and Author Two and Author Three},\n  title     = {Your Project Title Here},\n  journal   = {Conference or Journal Name},\n  year      = {2026},\n}"
+    "title": "Project Matrix: Autonomous Robotaxi Summoning {Matrix}",
+    "section": "Full System Demo",
+    "text": "Full System Demo"
   }
 ]
