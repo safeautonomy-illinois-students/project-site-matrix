@@ -94,10 +94,10 @@ $$J = \sum_{t=0}^{T} \|x_t - x_{ref,t}\|^2_Q + \|u_t\|^2_R$$
 :::
 
 ::: {.section-container}
-## Full System Demo {#video .section-title}
+## Simulator Setup Demo {#video .section-title}
 
 ::: {.video-container}
-{{< video https://www.youtube.com/embed/cSQTZoZPJzs >}}
+{{< video static/videos/gem_sim_setup.mp4 >}}
 :::
 :::
 

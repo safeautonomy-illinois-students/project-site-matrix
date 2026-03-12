@@ -14,7 +14,7 @@ Your site won't go live until you flip this switch:
 4. Under **Source**, select **GitHub Actions** from the dropdown
 5. Click **Save**
 
-That's it, sfrom now on, every push to `main` will automatically build and publish your site. Your site URL will be:
+That's it, from now on, every push to `main` will automatically build and publish your site. Your site URL will be:
 
 ```
 https://<org-name>.github.io/<repo-name>/
@@ -29,7 +29,7 @@ git clone https://github.com/<org-name>/<repo-name>.git
 cd <repo-name>
 ```
 
-Open **`index.qmd`** in any text editor and start replacing the placeholder content. Every section is marked with comments like `<!-- ABSTRACT -->` so you know exactly what to change.
+Open `**index.qmd**` in any text editor and start replacing the placeholder content. Every section is marked with comments like `<!-- ABSTRACT -->` so you know exactly what to change.
 
 At a minimum, update these:
 
@@ -47,13 +47,13 @@ If you want to preview before pushing:
 
 1. Install Quarto from [quarto.org/docs/get-started](https://quarto.org/docs/get-started/)
 2. Install the Font Awesome extension (for button icons):
-   ```bash
+  ```bash
    quarto add quarto-ext/fontawesome
-   ```
+  ```
 3. Run:
-   ```bash
+  ```bash
    quarto preview
-   ```
+  ```
    This opens a live-reloading preview in your browser.
 
 ### Step 4: Push your changes
@@ -125,12 +125,14 @@ If the Font Awesome icons aren't rendering, remove the `{{< fa ... >}}` shortcod
 
 ## Troubleshooting
 
-| Problem | Fix |
-|---|---|
-| Site shows 404 | Check **Settings → Pages** is set to "GitHub Actions". Then check the **Actions** tab to see if the build succeeded. |
-| Build fails in Actions | Click into the failed run to read the error log. Common fix: make sure `index.qmd` has no syntax errors. |
-| Images not showing | Check that the file paths in `index.qmd` match the actual filenames in `static/images/`. Paths are case-sensitive. |
-| Changes not appearing | Make sure you pushed to the `main` branch. The workflow only triggers on `main`. |
+
+| Problem                | Fix                                                                                                                  |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Site shows 404         | Check **Settings → Pages** is set to "GitHub Actions". Then check the **Actions** tab to see if the build succeeded. |
+| Build fails in Actions | Click into the failed run to read the error log. Common fix: make sure `index.qmd` has no syntax errors.             |
+| Images not showing     | Check that the file paths in `index.qmd` match the actual filenames in `static/images/`. Paths are case-sensitive.   |
+| Changes not appearing  | Make sure you pushed to the `main` branch. The workflow only triggers on `main`.                                     |
+
 
 ## Credits
 
