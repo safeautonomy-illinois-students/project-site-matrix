@@ -159,6 +159,103 @@ body {
   margin-bottom: 0.5rem;
 }
 
+.overview-intro,
+.overview-footnote {
+  max-width: 860px;
+}
+
+.subsection-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-link-hover);
+  text-align: center;
+  margin: 2rem 0 1rem;
+}
+
+.overview-grid,
+.spec-grid {
+  display: grid;
+  gap: 1.1rem;
+  margin-top: 0.75rem;
+}
+
+.overview-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.spec-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.overview-card,
+.spec-card {
+  background:
+    linear-gradient(180deg, rgba(74, 108, 247, 0.08), rgba(74, 108, 247, 0.02)),
+    #ffffff;
+  border: 1px solid rgba(74, 108, 247, 0.14);
+  border-radius: 16px;
+  padding: 1.2rem 1.2rem 1rem;
+  box-shadow: 0 10px 24px rgba(44, 72, 160, 0.08);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.overview-card:hover,
+.spec-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 30px rgba(44, 72, 160, 0.12);
+  border-color: rgba(74, 108, 247, 0.28);
+}
+
+.overview-card h4,
+.spec-card h4 {
+  margin-top: 0;
+  margin-bottom: 0.55rem;
+  font-size: 1.05rem;
+  color: var(--color-heading);
+}
+
+.overview-card p,
+.spec-card p,
+.spec-card ul {
+  margin-bottom: 0;
+}
+
+.spec-card strong {
+  display: inline-block;
+  margin-bottom: 0.45rem;
+  color: var(--color-link-hover);
+}
+
+.spec-card ul {
+  text-align: left;
+  padding-left: 1.1rem;
+  margin-top: 0.35rem;
+}
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.7rem;
+  max-width: 860px;
+  margin: 0 auto 1.25rem;
+}
+
+.stack-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(74, 108, 247, 0.1);
+  border: 1px solid rgba(74, 108, 247, 0.16);
+  color: var(--color-link-hover);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
 /* ---------- Teaser ---------- */
 .hero-teaser {
   text-align: center;
@@ -300,12 +397,19 @@ body {
   .section-title {
     font-size: 1.4rem;
   }
+  .subsection-title {
+    font-size: 1rem;
+  }
   .button-row {
     gap: 0.4rem;
   }
   .button-row .btn {
     padding: 0.4rem 0.75rem;
     font-size: 0.82rem;
+  }
+  .overview-card,
+  .spec-card {
+    padding: 1rem;
   }
   .interpolation-endpoints {
     flex-direction: column;

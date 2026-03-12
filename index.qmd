@@ -34,35 +34,97 @@ A Full-Stack Autonomy Pipeline for the Polaris GEM e2: From GPS Summoning to Pre
 :::
 
 ::: {.section-container}
-## Technical Architecture {.section-title}
+## Abstract {.section-title}
 
-Our implementation decomposes the "Summon" challenge into four integrated functional pillars, ensuring a seamless transition from a stationary parking state to active autonomous navigation.
-
-
-
-::: {.results-grid}
-
-::: {.result-card}
-### 🧠 Perception & BEV Mapping
-The system processes raw camera feeds through a **Neural Segmentation Network** to identify drivable regions. This is followed by an **Inverse Perspective Mapping (IPM)** to generate a Bird's Eye View (BEV), allowing for precise geometric road-line fitting and spatial awareness.
-:::
-
-::: {.result-card}
-### 🗺️ Navigation & Path Planning
-A **Global Planner** processes GPS coordinates received from the summon app to determine optimal routing and initial vehicle heading. The **Local Planner** then generates real-time waypoints that bridge the gap between the parking spot and the main driving lanes.
-:::
-
-::: {.result-card}
-### 🏎️ MPC & Dynamic Control
-The core control layer utilizes **Model Predictive Control (MPC)** to track waypoints. It solves an optimization problem at every time step, balancing vehicle dynamics with hard safety constraints to ensure the car remains centered in the drivable region while managing longitudinal velocity.
-:::
-
-::: {.result-card}
-### 🛡️ Sensor Fusion & Safety
-Safety is enforced through a **Multi-Modal Fusion** of Lidar and Stereo camera data. This module performs real-time object detection (cones/obstacles) and utilizes **YOLO** for stop-sign recognition, enabling automatic "stop-and-resume" behavior based on environmental clearance.
+::: {.abstract-text}
+We present a constrained-optimization-based autonomy framework for summoning a full-scale Polaris GEM e2 to a user-specified GPS target from a phone interface. Starting from a parked state, the vehicle must enter the lane, follow the drivable region, react to stop signs and obstacles, resume when the path clears, and stop within 2 m of the goal. Our stack centers on Model Predictive Control (MPC), which repeatedly solves a finite-horizon optimization problem and applies the first control input in closed loop. The formulation balances lane-center tracking and control effort while enforcing vehicle dynamics, actuator limits, obstacle avoidance, and terminal goal constraints. References are generated from camera-based drivable-region detection, bird's-eye-view transformation, and polynomial fitting of the lane centerline, while GPS routing and multimodal perception provide destination and hazard information. Despite the computational demands of MPC, the onboard AStuff Spectra 2 platform provides sufficient headroom for online optimization. The resulting architecture directly targets the summon deliverables through unified, safety-aware control.
 :::
 
 :::
+
+::: {.section-container}
+## System Overview {.section-title}
+
+::: {.content-text .overview-intro}
+The system is organized as a perception-planning-control pipeline for autonomous summoning on the Polaris GEM e2. A phone-provided GPS target is converted into a route and lane-entry decision, perception modules estimate the drivable corridor and nearby hazards, and a constrained controller generates feasible vehicle actions that respect safety and goal-reaching requirements.
+:::
+
+### Core Modules {.subsection-title}
+
+::: {.overview-grid}
+
+::: {.overview-card}
+#### GPS Coordinate Receiver
+Receives a destination from the provided phone application and publishes the target GPS coordinates to the autonomy stack.
+:::
+
+::: {.overview-card}
+#### Path Planner
+Determines how the vehicle exits the parking area, selects the lane-entry direction, and routes the car toward the destination using the current scene geometry and target location.
+:::
+
+::: {.overview-card}
+#### Park-to-Drive Controller
+Handles the transition from a stationary parked configuration into a valid driving state before handing off to lane following and long-horizon control.
+:::
+
+::: {.overview-card}
+#### Camera-Based Lane Following and MPC
+Uses neural lane segmentation, inverse perspective mapping, and polynomial fitting to estimate the lane centerline, then solves a receding-horizon MPC problem for longitudinal and lateral control.
+:::
+
+::: {.overview-card}
+#### Obstacle Detection and Distance Estimation
+Combines stop-sign recognition and obstacle ranging from the stereo camera and top LiDAR to trigger safe stopping, clearance checking, and automatic resume behavior.
+:::
+
+:::
+
+### Sensors and Compute {.subsection-title}
+
+::: {.spec-grid}
+
+::: {.spec-card}
+#### Front Stereo Camera
+**ZED2**
+
+Provides forward-facing RGB imagery and depth cues for lane segmentation, stop-sign recognition, and short-range geometric reasoning.
+:::
+
+::: {.spec-card}
+#### Top LiDAR
+**Ouster OS1-128**
+
+Supplies dense 3D range data for obstacle detection, clearance estimation, and robust environmental awareness beyond image-only perception.
+:::
+
+::: {.spec-card}
+#### Onboard Compute
+**AStuff Spectra 2**
+
+- **CPU:** Intel Xeon E-2278G 3.40 GHz x16
+- **GPU:** NVIDIA RTX A4000
+
+This platform supports real-time perception and the computational load of online MPC optimization.
+:::
+
+:::
+
+### Software Stack {.subsection-title}
+
+::: {.pill-row}
+[ROS 2 Humble]{.stack-pill}
+[Polaris GEM e2 platform]{.stack-pill}
+[Gazebo Ignition simulator]{.stack-pill}
+[Phone app GPS interface]{.stack-pill}
+[C++ control pipeline]{.stack-pill}
+[Perception-planning-control integration]{.stack-pill}
+:::
+
+::: {.content-text .overview-footnote}
+Together, these modules provide the information flow needed for the summon task: destination input drives routing, perception estimates the free space and hazards, and the controller converts those updates into safe, dynamically feasible commands.
+:::
+
 :::
 
 
