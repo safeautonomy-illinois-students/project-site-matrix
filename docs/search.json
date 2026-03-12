@@ -14,11 +14,11 @@
     "text": "Technical Architecture\nOur implementation decomposes the “Summon” challenge into four integrated functional pillars, ensuring a seamless transition from a stationary parking state to active autonomous navigation.\n\n\n🧠 Perception & BEV Mapping\nThe system processes raw camera feeds through a Neural Segmentation Network to identify drivable regions. This is followed by an Inverse Perspective Mapping (IPM) to generate a Bird’s Eye View (BEV), allowing for precise geometric road-line fitting and spatial awareness.\n\n\n🗺️ Navigation & Path Planning\nA Global Planner processes GPS coordinates received from the summon app to determine optimal routing and initial vehicle heading. The Local Planner then generates real-time waypoints that bridge the gap between the parking spot and the main driving lanes.\n\n\n🏎️ MPC & Dynamic Control\nThe core control layer utilizes Model Predictive Control (MPC) to track waypoints. It solves an optimization problem at every time step, balancing vehicle dynamics with hard safety constraints to ensure the car remains centered in the drivable region while managing longitudinal velocity.\n\n\n🛡️ Sensor Fusion & Safety\nSafety is enforced through a Multi-Modal Fusion of Lidar and Stereo camera data. This module performs real-time object detection (cones/obstacles) and utilizes YOLO for stop-sign recognition, enabling automatic “stop-and-resume” behavior based on environmental clearance."
   },
   {
-    "objectID": "index.html#safe-control-framework",
-    "href": "index.html#safe-control-framework",
+    "objectID": "index.html#mpc-problem-formulation",
+    "href": "index.html#mpc-problem-formulation",
     "title": "Project Matrix: Autonomous Robotaxi Summoning {Matrix}",
-    "section": "Safe Control Framework",
-    "text": "Safe Control Framework\n\nTo ensure the vehicle stays within the drivable region, we utilize Model Predictive Control (MPC). The control input \\(u\\) is derived by minimizing a cost function \\(J\\) subject to vehicle dynamics and environmental constraints:\n\\[J = \\sum_{t=0}^{T} \\|x_t - x_{ref,t}\\|^2_Q + \\|u_t\\|^2_R\\]\nSafety Constraints: - Drivable Region: \\(\\forall t, x_t \\in \\mathcal{X}_{free}\\) - Obstacle Avoidance: \\(\\|x_t - x_{obs}\\| &gt; d_{min}\\) - Precision Goal: \\(\\|x_T - x_{goal}\\| \\leq 2m\\)"
+    "section": "MPC Problem Formulation",
+    "text": "MPC Problem Formulation\n\nTo ensure the vehicle stays within the drivable region, we utilize Model Predictive Control (MPC). The control input \\(u\\) is derived by minimizing a cost function \\(J\\) subject to vehicle dynamics and environmental constraints:\n\\[J = \\sum_{t=0}^{T} \\|x_t - x_{ref,t}\\|^2_Q + \\|u_t\\|^2_R\\]\nSafety Constraints: - Drivable Region: \\(\\forall t, x_t \\in \\mathcal{X}_{free}\\) - Obstacle Avoidance: \\(\\|x_t - x_{obs}\\| &gt; d_{min}\\) - Precision Goal: \\(\\|x_T - x_{goal}\\| \\leq 2m\\)"
   },
   {
     "objectID": "index.html#project-roadmap",

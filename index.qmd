@@ -67,7 +67,7 @@ Safety is enforced through a **Multi-Modal Fusion** of Lidar and Stereo camera d
 
 
 ::: {.section-container}
-## Safe Control Framework {.section-title}
+## MPC Problem Formulation {.section-title}
 
 ::: {.content-text}
 To ensure the vehicle stays within the drivable region, we utilize Model Predictive Control (MPC). The control input $u$ is derived by minimizing a cost function $J$ subject to vehicle dynamics and environmental constraints:

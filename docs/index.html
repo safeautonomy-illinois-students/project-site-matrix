@@ -193,8 +193,8 @@ window.Quarto = {
 </section>
 </div>
 </section>
-<section id="safe-control-framework" class="level2 section-title section-container">
-<h2 class="section-title anchored" data-anchor-id="safe-control-framework">Safe Control Framework</h2>
+<section id="mpc-problem-formulation" class="level2 section-title section-container">
+<h2 class="section-title anchored" data-anchor-id="mpc-problem-formulation">MPC Problem Formulation</h2>
 <div class="content-text">
 <p>To ensure the vehicle stays within the drivable region, we utilize Model Predictive Control (MPC). The control input <span class="math inline">\(u\)</span> is derived by minimizing a cost function <span class="math inline">\(J\)</span> subject to vehicle dynamics and environmental constraints:</p>
 <p><span class="math display">\[J = \sum_{t=0}^{T} \|x_t - x_{ref,t}\|^2_Q + \|u_t\|^2_R\]</span></p>
