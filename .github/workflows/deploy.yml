@@ -2,7 +2,7 @@ name: Build and Deploy Quarto Site
 
 on:
   push:
-    branches: [main]
+    branches: [main, prachit]
   workflow_dispatch:    # allows manual trigger from Actions tab
 
 permissions:
@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   build-deploy:
+    if: github.ref_name == 'main' || github.repository_owner != 'safeautonomy-illinois-students'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

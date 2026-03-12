@@ -256,6 +256,29 @@ body {
   line-height: 1.2;
 }
 
+.mpc-compact {
+  max-width: 860px;
+  font-size: 0.96rem;
+  line-height: 1.7;
+}
+
+.mpc-equation {
+  max-width: 860px;
+  margin: 0.75rem auto 1rem;
+  padding: 0.85rem 1rem 0.25rem;
+  background: rgba(74, 108, 247, 0.03);
+  border-left: 3px solid rgba(74, 108, 247, 0.35);
+  border-radius: 6px;
+}
+
+.mpc-equation p {
+  margin-bottom: 0;
+}
+
+.mpc-equation mjx-container {
+  font-size: 92% !important;
+}
+
 /* ---------- Teaser ---------- */
 .hero-teaser {
   text-align: center;
@@ -410,6 +433,12 @@ body {
   .overview-card,
   .spec-card {
     padding: 1rem;
+  }
+  .mpc-compact {
+    font-size: 0.93rem;
+  }
+  .mpc-equation {
+    padding: 0.75rem 0.8rem 0.2rem;
   }
   .interpolation-endpoints {
     flex-direction: column;

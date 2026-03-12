@@ -117,12 +117,11 @@ This platform supports real-time perception and the computational load of online
 [Polaris GEM e2 platform]{.stack-pill}
 [Gazebo Ignition simulator]{.stack-pill}
 [Phone app GPS interface]{.stack-pill}
-[C++ control pipeline]{.stack-pill}
-[Perception-planning-control integration]{.stack-pill}
+[C++ solver]{.stack-pill}
 :::
 
 ::: {.content-text .overview-footnote}
-Together, these modules provide the information flow needed for the summon task: destination input drives routing, perception estimates the free space and hazards, and the controller converts those updates into safe, dynamically feasible commands.
+Together, these modules provide the information flow needed for the summon task: destination input drives routing, perception scans the environment for free spaces, obstacles and stop signs, and the controller converts those updates into safe, dynamically feasible commands.
 :::
 
 :::
@@ -131,27 +130,47 @@ Together, these modules provide the information flow needed for the summon task:
 ::: {.section-container}
 ## MPC Problem Formulation {.section-title}
 
-::: {.content-text}
-To ensure the vehicle stays within the drivable region, we utilize Model Predictive Control (MPC). The control input $u$ is derived by minimizing a cost function $J$ subject to vehicle dynamics and environmental constraints:
+::: {.content-text .mpc-compact}
+We model lane tracking and goal reaching as a receding-horizon optimization problem. The reference state $x_{ref,k}$ is obtained from the lane centerline estimated using neural drivable-region segmentation, bird's-eye-view transformation, and polynomial fitting.
+:::
 
-$$J = \sum_{t=0}^{T} \|x_t - x_{ref,t}\|^2_Q + \|u_t\|^2_R$$
+::: {.mpc-equation}
+$$
+\begin{aligned}
+\min_{\{x_k,u_k\}} \quad
+& \sum_{k=0}^{N-1} \|x_k - x_{ref,k}\|_Q^2
++ \|u_k\|_R^2
++ \|\Delta u_k\|_S^2 \\
+& + \|x_N - x_{goal}\|_P^2 \\
+\text{s.t.} \quad
+& x_{k+1} = A_k x_k + B_k u_k + c_k, \\
+& \delta_{\min} \le \delta_k \le \delta_{\max}, \quad
+  a_{\min} \le a_k \le a_{\max}, \\
+& x_k \in \mathcal{X}_{free}, \\
+& d(x_k,\mathcal{O}_i) \ge d_{\text{safe}}, \quad \forall i, \\
+& \|x_N - x_{goal}\| \le \epsilon .
+\end{aligned}
+$$
+:::
 
-**Safety Constraints:**
-- **Drivable Region:** $\forall t, x_t \in \mathcal{X}_{free}$
-- **Obstacle Avoidance:** $\|x_t - x_{obs}\| > d_{min}$
-- **Precision Goal:** $\|x_T - x_{goal}\| \leq 2m$
+::: {.content-text .mpc-compact}
+The cost penalizes lane-center deviation, control effort, and control variation, while the terminal term enforces convergence near the GPS goal. The constraints encode actuator bounds, locally linearized vehicle dynamics, drivable-region consistency, obstacle clearance, and the final stopping tolerance.
+
+The original problem is nonlinear because the vehicle dynamics and obstacle-distance constraints are nonlinear, and is therefore non-convex in its full form. For real-time deployment, we solve a locally linearized sparse quadratic program at each update. A warm-started solver such as **OSQP** is a good fit for this approximation because it is efficient for quadratic objectives with linear constraints, integrates cleanly with C++, and offers more predictable timing than a full nonlinear solve. The MPC optimization runs on a dedicated C++ thread, while ROS 2 callbacks independently update odometry, lane geometry, LiDAR obstacles, stereo depth, and stop-sign detections.
 :::
 :::
 
 ::: {.section-container}
-## Project Roadmap {.section-title}
+## Tentative Plan and Work Allocation {.section-title}
 
-| Stage | Milestone | Status |
-|-------|-----------|--------|
-| **01** | **Simulation Baseline** | ✅ Complete |
-| **02** | **Lane Following (IRL)** | 🏗️ In Progress |
-| **03** | **Park-to-Drive Integration** | 📅 Upcoming |
-| **04** | **Full System Launch** | 📅 May 2026 |
+| Evaluation Item | Planned Method | Owner(s) |
+|---|---|---|
+| **Detect the drivable region (lane following)** | Use a neural network to segment the lane, apply a bird's-eye-view transformation, and recover the instantaneous lane geometry from the transformed scene. | **Praise** |
+| **Generate waypoints to the destination location** | Perform curve fitting in the BEV frame and use MPC to generate both waypoints and control inputs, with obstacle avoidance and vehicle dynamics enforced through the optimization. | **Aryan, Prachit** |
+| **Ensure the car stays in the drivable region for the entire journey** | Encode lane tracking through the MPC cost and maintain corridor consistency through explicit constraints on the predicted state. | **Prachit, Praise** |
+| **Stop completely and automatically when an obstacle or stop sign is detected** | Use stereo-LiDAR sensor fusion for obstacle detection and distance estimation, together with YOLOv8-based stop-sign detection from the front stereo camera. | **Sanath** |
+| **Resume automatically once the obstacle is removed** | Let the planning layer resume motion only when the path is clear and a viable waypoint sequence can be generated again. | **Aryan, Sanath** |
+| **Stop within 2 m of the goal** | Use terminal planning and low-speed final approach logic to satisfy the stopping tolerance near the destination. | **Prachit** |
 
 :::
 
