@@ -80,7 +80,7 @@ Combines stop-sign recognition and obstacle ranging from the stereo camera and t
 
 :::
 
-### Sensors and Compute {.subsection-title}
+### Sensors and Computation{.subsection-title}
 
 ::: {.spec-grid}
 
@@ -166,7 +166,7 @@ The original problem is nonlinear because the vehicle dynamics and obstacle-dist
 | Evaluation Item | Planned Method | Owner(s) |
 |---|---|---|
 | **Detect the drivable region (lane following)** | Use a neural network to segment the lane, apply a bird's-eye-view transformation, and recover the instantaneous lane geometry from the transformed scene. | **Praise** |
-| **Generate waypoints to the destination location** | Perform curve fitting in the BEV frame and use MPC to generate both waypoints and control inputs, with obstacle avoidance and vehicle dynamics enforced through the optimization. | **Aryan, Prachit** |
+| **Generate waypoints to the destination location** | Perform curve fitting in the BEV frame and use MPC to generate both trajectory and control inputs, with obstacle avoidance and vehicle dynamics enforced through the constraints. | **Aryan, Prachit** |
 | **Ensure the car stays in the drivable region for the entire journey** | Encode lane tracking through the MPC cost and maintain corridor consistency through explicit constraints on the predicted state. | **Prachit, Praise** |
 | **Stop completely and automatically when an obstacle or stop sign is detected** | Use stereo-LiDAR sensor fusion for obstacle detection and distance estimation, together with YOLOv8-based stop-sign detection from the front stereo camera. | **Sanath** |
 | **Resume automatically once the obstacle is removed** | Let the planning layer resume motion only when the path is clear and a viable waypoint sequence can be generated again. | **Aryan, Sanath** |

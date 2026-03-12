@@ -279,6 +279,40 @@ body {
   font-size: 92% !important;
 }
 
+#tentative-plan-and-work-allocation table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  box-shadow: none;
+  margin-top: 0.5rem;
+}
+
+#tentative-plan-and-work-allocation thead th {
+  background: #f3f5f8;
+  color: #2f3b52;
+  font-weight: 600;
+  text-align: left;
+  border: 1px solid #d8dee8;
+  padding: 0.7rem 0.8rem;
+}
+
+#tentative-plan-and-work-allocation tbody td {
+  border: 1px solid #d8dee8;
+  padding: 0.75rem 0.8rem;
+  vertical-align: top;
+  text-align: left;
+}
+
+#tentative-plan-and-work-allocation tbody tr:nth-child(even) {
+  background: #fafbfd;
+}
+
+#tentative-plan-and-work-allocation strong {
+  font-weight: 600;
+}
+
 /* ---------- Teaser ---------- */
 .hero-teaser {
   text-align: center;
@@ -439,6 +473,13 @@ body {
   }
   .mpc-equation {
     padding: 0.75rem 0.8rem 0.2rem;
+  }
+  #tentative-plan-and-work-allocation table {
+    font-size: 0.84rem;
+  }
+  #tentative-plan-and-work-allocation thead th,
+  #tentative-plan-and-work-allocation tbody td {
+    padding: 0.6rem 0.65rem;
   }
   .interpolation-endpoints {
     flex-direction: column;
