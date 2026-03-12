@@ -182,6 +182,16 @@ The original problem is nonlinear because the vehicle dynamics and obstacle-dist
 :::
 :::
 
+::: {.section-container}
+## References {.section-title}
+
+::: {.content-text}
+1. John Duchi, with help from Stephen Boyd and Jacob Mattingley, *Sequential Convex Programming*, notes for EE364b, Stanford University, Spring 2018. [PDF](https://web.stanford.edu/class/ee364b/lectures/seq_notes.pdf)
+2. David Shim, Hoam Chung, Hyoun Jin Kim, and Shankar Sastry, "Autonomous Exploration In Unknown Urban Environments For Unmanned Aerial Vehicles," *AIAA Guidance, Navigation, and Control Conference and Exhibit*, 2005. [DOI](https://doi.org/10.2514/6.2005-6478)
+:::
+
+:::
+
 ::: {.site-footer}
 This project was developed for **ECE 484: Principles of Safe Autonomy** at UIUC.
 :::

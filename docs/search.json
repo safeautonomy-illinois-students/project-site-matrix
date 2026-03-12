@@ -40,5 +40,12 @@
     "title": "Project Matrix: Autonomous Robotaxi Summoning {Matrix}",
     "section": "Simulator Setup Demo",
     "text": "Simulator Setup Demo"
+  },
+  {
+    "objectID": "index.html#references",
+    "href": "index.html#references",
+    "title": "Project Matrix: Autonomous Robotaxi Summoning {Matrix}",
+    "section": "References",
+    "text": "References\n\n\nJohn Duchi, with help from Stephen Boyd and Jacob Mattingley, Sequential Convex Programming, notes for EE364b, Stanford University, Spring 2018. PDF\nDavid Shim, Hoam Chung, Hyoun Jin Kim, and Shankar Sastry, “Autonomous Exploration In Unknown Urban Environments For Unmanned Aerial Vehicles,” AIAA Guidance, Navigation, and Control Conference and Exhibit, 2005. DOI"
   }
 ]
