@@ -39,7 +39,7 @@ try:
     import cvxpy as cp
 except Exception:
     cp = None
-from llm_drone.llm.native_mpc_backend import (
+from native_mpc_backend import (
     native_backend_available,
     native_osqp_available,
     solve_osqp as solve_native_osqp,
