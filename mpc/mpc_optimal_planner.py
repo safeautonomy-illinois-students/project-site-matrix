@@ -4,9 +4,10 @@ MPC-based UAV Trajectory Planner for ROS2
 ==========================================
 
 System:
-  - Sensor  : /depth_camera  (sensor_msgs/Image, encoding=32FC1, metres)
-  - Output  : /fmu/in/trajectory_setpoint  (px4_msgs/TrajectorySetpoint, NED frame)
-  - State   : /fmu/out/vehicle_local_position (px4_msgs/VehicleLocalPosition)
+  - GEM sensor  : /depth_camera/image_raw and /scan/points
+  - GEM output  : /ackermann_cmd (ackermann_msgs/AckermannDrive)
+  - GEM state   : /odom (nav_msgs/Odometry)
+  - PX4 output  : /fmu/in/trajectory_setpoint  (px4_msgs/TrajectorySetpoint, NED frame)
 
 MPC Formulation (discrete-time, horizon T steps)
 -------------------------------------------------
@@ -47,10 +48,20 @@ from native_mpc_backend import (
 )
 
 # ROS2 message types
-from sensor_msgs.msg import Image
-from nav_msgs.msg import Path
+from sensor_msgs.msg import Image, PointCloud2
+from nav_msgs.msg import Odometry, Path
 from geometry_msgs.msg import PoseStamped
-from px4_msgs.msg import TrajectorySetpoint, VehicleOdometry, OffboardControlMode, VehicleStatus
+from ackermann_msgs.msg import AckermannDrive
+try:
+    from sensor_msgs_py import point_cloud2
+except Exception:
+    point_cloud2 = None
+try:
+    from px4_msgs.msg import TrajectorySetpoint, VehicleOdometry, OffboardControlMode, VehicleStatus
+    PX4_MSGS_AVAILABLE = True
+except Exception:
+    TrajectorySetpoint = VehicleOdometry = OffboardControlMode = VehicleStatus = None
+    PX4_MSGS_AVAILABLE = False
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MPC PARAMETERS  (tune these)
@@ -110,6 +121,17 @@ ENABLE_DELAY_COMPENSATION = False  # global default: compensate PX4 tracking lag
 DELAY_COMPENSATION_SEC = 0.15      # forward-prediction horizon for delay compensation [s]
 DEFAULT_MPC_SOLVER_BACKEND = 'python'
 DEFAULT_ENABLE_DEPTH_CAMERA = True
+DEFAULT_ENABLE_LIDAR = True
+DEFAULT_INTERFACE_MODE = 'gem'
+DEFAULT_GEM_DEPTH_TOPIC = '/depth_camera/image_raw'
+DEFAULT_GEM_LIDAR_TOPIC = '/scan/points'
+DEFAULT_GEM_ODOM_TOPIC = '/odom'
+DEFAULT_GEM_ACKERMANN_TOPIC = '/ackermann_cmd'
+DEFAULT_PX4_DEPTH_TOPIC = '/depth_camera'
+DEFAULT_GEM_MAX_SPEED_MPS = 6.0
+DEFAULT_GEM_WHEELBASE_M = 1.75
+DEFAULT_GEM_MAX_STEERING_RAD = 0.61
+DEFAULT_GEM_STEERING_KP = 1.8
 DEFAULT_OBSTACLE_CONSTRAINTS_DISABLED = False
 # Target heading: Gazebo +X (ENU East). Converted to NED yaw reference:
 # yaw_ned = pi/2 - yaw_enu, with yaw_enu(+X)=0 => yaw_ned=+pi/2.
@@ -959,22 +981,44 @@ class DepthToObstacles:
 
 class MPCUAVNode(Node):
     """
-    ROS2 node integrating depth camera perception + MPC trajectory planning.
+    ROS2 node integrating depth/lidar perception + MPC trajectory planning.
 
     Subscriptions:
-      /depth_camera                   sensor_msgs/Image
-      /fmu/out/vehicle_odometry       px4_msgs/VehicleOdometry
+      GEM: /odom, /depth_camera/image_raw, /scan/points
+      PX4: /fmu/out/vehicle_odometry, /depth_camera
 
     Publications:
-      /fmu/in/trajectory_setpoint     px4_msgs/TrajectorySetpoint
+      GEM: /ackermann_cmd
+      PX4: /fmu/in/trajectory_setpoint
     """
 
     def __init__(self):
         super().__init__('mpc_optimal_uav_node')
+        self.declare_parameter('interface_mode', DEFAULT_INTERFACE_MODE)
         self.declare_parameter('enable_depth_camera', DEFAULT_ENABLE_DEPTH_CAMERA)
+        self.declare_parameter('enable_lidar', DEFAULT_ENABLE_LIDAR)
         self.declare_parameter('mpc_solver_backend', DEFAULT_MPC_SOLVER_BACKEND)
+        self.declare_parameter('depth_topic', DEFAULT_GEM_DEPTH_TOPIC)
+        self.declare_parameter('lidar_topic', DEFAULT_GEM_LIDAR_TOPIC)
+        self.declare_parameter('odom_topic', DEFAULT_GEM_ODOM_TOPIC)
+        self.declare_parameter('ackermann_topic', DEFAULT_GEM_ACKERMANN_TOPIC)
+        self.declare_parameter('gem_max_speed_mps', DEFAULT_GEM_MAX_SPEED_MPS)
+        self.declare_parameter('gem_wheelbase_m', DEFAULT_GEM_WHEELBASE_M)
+        self.declare_parameter('gem_max_steering_rad', DEFAULT_GEM_MAX_STEERING_RAD)
+        self.declare_parameter('gem_steering_kp', DEFAULT_GEM_STEERING_KP)
+        self._interface_mode = str(self.get_parameter('interface_mode').value).strip().lower()
+        if self._interface_mode not in ('gem', 'px4'):
+            self.get_logger().warn(
+                f'Unknown interface_mode={self._interface_mode!r}; using GEM interface.'
+            )
+            self._interface_mode = 'gem'
         self._enable_depth_camera = bool(self.get_parameter('enable_depth_camera').value)
+        self._enable_lidar = bool(self.get_parameter('enable_lidar').value)
         self._mpc_solver_backend = str(self.get_parameter('mpc_solver_backend').value)
+        self._gem_max_speed_mps = max(0.0, float(self.get_parameter('gem_max_speed_mps').value))
+        self._gem_wheelbase_m = max(0.1, float(self.get_parameter('gem_wheelbase_m').value))
+        self._gem_max_steering_rad = max(0.01, float(self.get_parameter('gem_max_steering_rad').value))
+        self._gem_steering_kp = max(0.0, float(self.get_parameter('gem_steering_kp').value))
 
         # ── QoS for PX4 topics ──────────────────────────────────────────────
         px4_qos = QoSProfile(
@@ -991,29 +1035,56 @@ class MPCUAVNode(Node):
 
         # ── subscribers ─────────────────────────────────────────────────────
         if self._enable_depth_camera:
+            depth_topic = str(self.get_parameter('depth_topic').value)
+            if self._interface_mode == 'px4' and depth_topic == DEFAULT_GEM_DEPTH_TOPIC:
+                depth_topic = DEFAULT_PX4_DEPTH_TOPIC
             self.create_subscription(Image,
-                '/depth_camera',
+                depth_topic,
                 self._depth_cb,
                 sensor_qos)
 
-        self.create_subscription(VehicleOdometry,
-            '/fmu/out/vehicle_odometry',
-            self._state_cb,
-            px4_qos)
-        self.create_subscription(VehicleStatus,
-            '/fmu/out/vehicle_status',
-            self._status_cb,
-            px4_qos)
+        if self._interface_mode == 'gem':
+            self.create_subscription(Odometry,
+                str(self.get_parameter('odom_topic').value),
+                self._gem_odom_cb,
+                sensor_qos)
+            if self._enable_lidar:
+                self.create_subscription(PointCloud2,
+                    str(self.get_parameter('lidar_topic').value),
+                    self._lidar_cb,
+                    sensor_qos)
+        else:
+            if not PX4_MSGS_AVAILABLE:
+                raise RuntimeError(
+                    'interface_mode=px4 requires px4_msgs, but px4_msgs could not be imported.'
+                )
+            self.create_subscription(VehicleOdometry,
+                '/fmu/out/vehicle_odometry',
+                self._state_cb,
+                px4_qos)
+            self.create_subscription(VehicleStatus,
+                '/fmu/out/vehicle_status',
+                self._status_cb,
+                px4_qos)
 
         # ── publisher ───────────────────────────────────────────────────────
-        self._sp_pub = self.create_publisher(
-            TrajectorySetpoint,
-            '/fmu/in/trajectory_setpoint',
-            px4_qos)
-        self._offboard_mode_pub = self.create_publisher(
-            OffboardControlMode,
-            '/fmu/in/offboard_control_mode',
-            px4_qos)
+        self._sp_pub = None
+        self._offboard_mode_pub = None
+        self._ackermann_pub = None
+        if self._interface_mode == 'gem':
+            self._ackermann_pub = self.create_publisher(
+                AckermannDrive,
+                str(self.get_parameter('ackermann_topic').value),
+                10)
+        else:
+            self._sp_pub = self.create_publisher(
+                TrajectorySetpoint,
+                '/fmu/in/trajectory_setpoint',
+                px4_qos)
+            self._offboard_mode_pub = self.create_publisher(
+                OffboardControlMode,
+                '/fmu/in/offboard_control_mode',
+                px4_qos)
         # Dataset-label publishers derived from the final solved MPC trajectory X_opt.
         self._mpc_label_path_pub = self.create_publisher(Path, '/mpc/trajectory_sequence', 10)
         self._mpc_local_prediction_path_pub = self.create_publisher(
@@ -1072,7 +1143,8 @@ class MPCUAVNode(Node):
         # ── MPC timer (10 Hz matches paper) ─────────────────────────────────
         self.create_timer(Ts, self._mpc_step)
         self.create_timer(PUBLISH_PERIOD_SEC, self._republish_latest_setpoint)
-        self.create_timer(OFFBOARD_HEARTBEAT_PERIOD_SEC, self._publish_offboard_heartbeat)
+        if self._interface_mode == 'px4':
+            self.create_timer(OFFBOARD_HEARTBEAT_PERIOD_SEC, self._publish_offboard_heartbeat)
         self.create_timer(1.0 / max(DEBUG_PLOT_RATE_HZ, 0.2), self._debug_plot_step)
 
         if not self._enable_depth_camera:
@@ -1082,7 +1154,7 @@ class MPCUAVNode(Node):
                 'Restart with --ros-args -p enable_depth_camera:=true to restore depth input.'
             )
 
-        self.get_logger().info(f'Using MPC solver backend: {self._mpc.backend_name}')
+        self.get_logger().info(f'Using interface_mode={self._interface_mode}, MPC solver backend: {self._mpc.backend_name}')
         self._log_status_info()
 
     # ── callbacks ────────────────────────────────────────────────────────────
@@ -1136,6 +1208,29 @@ class MPCUAVNode(Node):
             dtype=float
         )
 
+    def _gem_odom_cb(self, msg: Odometry) -> None:
+        """Update planar vehicle state from GEM /odom using the simulator world frame."""
+        q = msg.pose.pose.orientation
+        self._yaw = self._quat_to_yaw(float(q.w), float(q.x), float(q.y), float(q.z))
+        self._R_ned_body = self._yaw_to_planar_rotmat(self._yaw)
+
+        pos = msg.pose.pose.position
+        linear = msg.twist.twist.linear
+        angular = msg.twist.twist.angular
+        self._x_state = np.array(
+            [
+                float(pos.x),
+                float(pos.y),
+                float(pos.z),
+                float(linear.x),
+                float(linear.y),
+                float(linear.z),
+                self._yaw,
+                float(angular.z),
+            ],
+            dtype=float,
+        )
+
     def _depth_cb(self, msg: Image) -> None:
         """
         Process depth image → 3-D obstacle points → update local map.
@@ -1160,6 +1255,48 @@ class MPCUAVNode(Node):
         )
 
         # ── Step 3: cache in FIFO local map  (Section III-B) ────────────────
+        self._obs_map.update(pts_ned)
+
+    def _lidar_cb(self, msg: PointCloud2) -> None:
+        """Convert GEM lidar point cloud to the planner spatial frame and update obstacle map."""
+        if point_cloud2 is None:
+            self.get_logger().warn('sensor_msgs_py.point_cloud2 is unavailable; cannot use /scan/points')
+            return
+
+        pts_body = []
+        try:
+            for x, y, z in point_cloud2.read_points(
+                msg,
+                field_names=('x', 'y', 'z'),
+                skip_nans=True,
+            ):
+                # ROS lidar frames are normally FLU: x forward, y left, z up.
+                # The obstacle transformer expects body FRD: x forward, y right, z down.
+                fwd = float(x)
+                right = -float(y)
+                down = -float(z)
+                if not np.isfinite([fwd, right, down]).all():
+                    continue
+                if fwd < DEPTH_FILTER_MIN_FORWARD_M or fwd > DEPTH_FILTER_MAX_FORWARD_M:
+                    continue
+                if abs(right) > DEPTH_FILTER_MAX_LATERAL_M:
+                    continue
+                pts_body.append((fwd, right, down))
+                if len(pts_body) >= self._depth2obs.n_sample:
+                    break
+        except Exception as exc:
+            self.get_logger().warn(f'Lidar decode error: {exc}')
+            return
+
+        if not pts_body:
+            return
+
+        pts = np.asarray(pts_body, dtype=float)
+        pts_ned = self._depth2obs.body_to_spatial(
+            pts,
+            self._R_ned_body,
+            self._x_state[:3],
+        )
         self._obs_map.update(pts_ned)
 
     def _status_cb(self, msg: VehicleStatus) -> None:
@@ -1429,6 +1566,12 @@ class MPCUAVNode(Node):
         Publish TrajectorySetpoint (position + velocity feedforward) to PX4.
         PX4 TrajectorySetpoint uses NED frame with NaN for unused fields.
         """
+        if self._interface_mode == 'gem':
+            self._publish_gem_ackermann(vel_ned)
+            return
+        if self._sp_pub is None:
+            return
+
         sp = TrajectorySetpoint()
         sp.timestamp = int(stamp_us) if stamp_us is not None else self.get_clock().now().nanoseconds // 1000   # µs
 
@@ -1457,6 +1600,36 @@ class MPCUAVNode(Node):
 
         self._sp_pub.publish(sp)
 
+    def _publish_gem_ackermann(self, vel_world: np.ndarray) -> None:
+        """Project the MPC world-frame velocity command into GEM Ackermann speed/steering."""
+        if self._ackermann_pub is None:
+            return
+
+        vx = float(vel_world[0])
+        vy = float(vel_world[1])
+        speed_mag = float(np.hypot(vx, vy))
+        if speed_mag < 1e-3:
+            target_speed = 0.0
+            steering = 0.0
+        else:
+            heading = float(self._x_state[6])
+            forward = float(np.cos(heading) * vx + np.sin(heading) * vy)
+            target_speed = float(np.clip(forward, -self._gem_max_speed_mps, self._gem_max_speed_mps))
+            desired_heading = float(np.arctan2(vy, vx))
+            heading_error = self._wrap_pi(desired_heading - heading)
+            yaw_rate_cmd = self._gem_steering_kp * heading_error
+            steer_speed = max(abs(target_speed), 0.25)
+            steering = float(np.arctan2(self._gem_wheelbase_m * yaw_rate_cmd, steer_speed))
+            steering = float(np.clip(steering, -self._gem_max_steering_rad, self._gem_max_steering_rad))
+
+        msg = AckermannDrive()
+        msg.speed = target_speed
+        msg.steering_angle = steering
+        msg.steering_angle_velocity = 0.0
+        msg.acceleration = 0.0
+        msg.jerk = 0.0
+        self._ackermann_pub.publish(msg)
+
     def _record_timer_interval(self, last_attr: str, samples: deque) -> None:
         """Track actual timer cadence for lightweight publish-rate diagnostics."""
         now = time.monotonic()
@@ -1477,6 +1650,8 @@ class MPCUAVNode(Node):
 
     def _publish_offboard_heartbeat(self) -> None:
         """Keep PX4 in velocity offboard mode for NED velocity command tracking."""
+        if self._offboard_mode_pub is None:
+            return
         self._record_timer_interval('_last_offboard_pub_monotonic', self._offboard_pub_dt)
         msg = OffboardControlMode()
         msg.timestamp = int(self.get_clock().now().nanoseconds / 1000)
@@ -1580,6 +1755,10 @@ class MPCUAVNode(Node):
 
     def set_goal_gazebo(self, x: float, y: float, z: float) -> None:
         """Update navigation goal from Gazebo world coordinates (ENU) [m]."""
+        if self._interface_mode == 'gem':
+            self.set_goal(float(x), float(y), float(z))
+            self._log_status_info()
+            return
         goal_ned = self._gazebo_enu_to_ned(x, y, z)
         self.set_goal(float(goal_ned[0]), float(goal_ned[1]), float(goal_ned[2]))
         self._log_status_info()
@@ -1648,6 +1827,22 @@ class MPCUAVNode(Node):
         w, x, y, z = w / n, x / n, y / n, z / n
         return float(np.arctan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z)))
 
+    @staticmethod
+    def _yaw_to_planar_rotmat(yaw: float) -> np.ndarray:
+        """Body FRD to simulator world x/y/z using only planar yaw."""
+        c = float(np.cos(yaw))
+        s = float(np.sin(yaw))
+        return np.array([
+            [c, s, 0.0],
+            [s, -c, 0.0],
+            [0.0, 0.0, -1.0],
+        ], dtype=float)
+
+    @staticmethod
+    def _wrap_pi(angle: float) -> float:
+        """Wrap an angle to [-pi, pi]."""
+        return float((angle + np.pi) % (2.0 * np.pi) - np.pi)
+
     def destroy_node(self):
         if self._solver_future is not None:
             self._solver_future.cancel()
@@ -1664,9 +1859,8 @@ def main(args=None):
     rclpy.init(args=args)
     node = MPCUAVNode()
 
-    # Example Gazebo world goal (ENU): x=East, y=North, z=Up
-    # This maps to PX4 local NED internally.
-    node.set_goal_gazebo(32.91, 0.00, 2.5)
+    # Example Gazebo world goal. GEM uses simulator x/y directly; PX4 converts ENU to NED.
+    node.set_goal_gazebo(32.91, 0.00, 0.0)
 
     try:
         rclpy.spin(node)

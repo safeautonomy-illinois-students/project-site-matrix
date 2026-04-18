@@ -1,0 +1,53 @@
+• The session is:
+
+  codex resume 019d7f61-3ff7-76f3-b14f-f811c76e7efe
+
+
+  The exact request in history was under session ID
+  019d7f61-3ff7-76f3-b14f-f811c76e7efe, around April
+  11/12, 2026:
+
+  change of plans ... lets clone gem_simulator
+  https://github.com/safeautonomy-illinois-students/g
+em_simulator.git
+  and run it using fortress matching requirements via
+  docker ...
+
+  The Docker repo/path created was:
+
+  /home/prachit/Desktop/sem2/ece484/
+  gem_simulator_fortress_docker
+
+  Relevant files:
+
+  /home/prachit/Desktop/sem2/ece484/
+  gem_simulator_fortress_docker/.devcontainer/
+  Dockerfile
+
+  /home/prachit/Desktop/sem2/ece484/
+  gem_simulator_fortress_docker/.devcontainer/
+  devcontainer.json
+
+  The key commands from that session were:
+
+  cd /home/prachit/Desktop/sem2/ece484/gem_simulator_fortress_docker
+  xhost +local:
+  sudo docker build -f .devcontainer/Dockerfile -t
+  gem-simulator-fortress .
+  sudo docker run --rm -it --network=host -e DISPLAY=$DISPLAY -e QT_X11_NO_MITSHM=1 -e LIBGL_ALWAYS_SOFTWARE=0 -v /tmp/.X11-unix:/tmp/.X11-unix:rw --device=/dev/dri:/dev/dri --privileged -v "$PWD":/workspaces/gem_simulator -w /workspaces/gem_simulator gem-simulator-fortress bash
+
+  Inside the container:
+
+  colcon build --symlink-install
+  source /opt/ros/humble/setup.bash
+  source install/setup.bash
+  ros2 launch gem_launch gem_init.launch.py
+  world_name:=highbay_testbed.world
+
+  The same session also has the follow-up fixes for
+  xhost +local:, using setup.bash instead of
+  setup.zsh, and the missing pynput dependency for
+  gem_drive.
+
+
+sudo docker run -it --rm --name gem-fortress --network host --privileged --gpus all --device=/dev/dri:/dev/dri -e DISPLAY=$DISPLAY -e QT_X11_NO_MITSHM=1 -e LIBGL_ALWAYS_SOFTWARE=0 -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v /home/prachit/Desktop/sem2/ece484/gem_simulator_fortress_docker:/workspaces/gem_simulator:rw  -v /home/prachit/Desktop/sem2/ece484/project-site-matrix:/workspaces/project-site-matrix:rw  gem-fortress bash
