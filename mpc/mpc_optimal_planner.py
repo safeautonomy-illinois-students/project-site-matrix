@@ -10,8 +10,8 @@ System:
 
 MPC Formulation (discrete-time, horizon T steps)
 -------------------------------------------------
-Solver state  : [x, y, vx, vy] in the horizontal plane
-Solver control: [ax, ay] planar accelerations
+Solver state  : [x, y, yaw, vx, vy] in the horizontal plane
+Solver control: [ax, ay, yaw_rate] planar accelerations + heading-rate command
 GEM output    : speed + steering via AckermannDrive
 Dynamics      : x(k+1) = x(k) + Ts * v(k),  v(k+1) = v(k) + Ts * a(k)
 
@@ -110,10 +110,13 @@ LANE_REFERENCE_TIMEOUT_SEC   = 0.5
 LANE_BLEND_FAR_METERS        = 8.0
 LANE_HEADING_REF_SPEED_MPS   = 3.0
 LANE_HEADING_ERROR_WEIGHT    = 1.5
+YAW_ERROR_WEIGHT            = 3.0
+YAW_RATE_WEIGHT             = 0.35
+MAX_YAW_RATE_RADPS          = 0.8
 
 FIFO_LEN              = 200   # local obstacle map FIFO size (Section III-B)
 SETPOINT_LOG_EVERY_N  = 10    # print debug every N control ticks
-DEBUG_PLOT_ENABLED    = False
+DEBUG_PLOT_ENABLED    = True
 DEBUG_PLOT_RATE_HZ    = 5.0
 DEBUG_PLOT_OBS_MAX    = 200
 DEBUG_PATH_HISTORY_LEN = 300
@@ -148,7 +151,7 @@ DEFAULT_GEM_MAX_STEERING_RAD     = 0.61
 DEFAULT_GEM_STEERING_KP          = 1.8
 DEFAULT_OBSTACLE_CONSTRAINTS_DISABLED = False
 
-U_LIMS   = np.array([A_MAX, A_MAX], dtype=float)
+U_LIMS   = np.array([A_MAX, A_MAX, MAX_YAW_RATE_RADPS], dtype=float)
 VEL_LIMS = np.array([V_MAX, V_MAX], dtype=float)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -411,19 +414,29 @@ class MPCDebugPlotter2D:
         self._path_hist = deque(maxlen=path_history_len)
         self._plt = None
         self._fig = None
-        self._ax  = None
+        self._ax_map = None
+        self._ax_err = None
+        self._ax_3d = None
         self._artists: dict[str, object] = {}
+        self._time_hist = deque(maxlen=path_history_len)
+        self._err_hist = deque(maxlen=path_history_len)
+        self._yaw_err_hist = deque(maxlen=path_history_len)
 
         if not self._enabled:
             return
 
         try:
             import matplotlib.pyplot as plt
+            from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
             self._plt = plt
             self._plt.ion()
-            self._fig, self._ax = self._plt.subplots(1, 1, figsize=(7, 7))
+            self._fig = self._plt.figure(figsize=(12, 9))
+            gs = self._fig.add_gridspec(2, 2, height_ratios=[1.0, 1.0])
+            self._ax_map = self._fig.add_subplot(gs[0, 0])
+            self._ax_err = self._fig.add_subplot(gs[1, 0])
+            self._ax_3d = self._fig.add_subplot(gs[:, 1], projection='3d')
             try:
-                self._fig.canvas.manager.set_window_title('MPC 2D Debug')
+                self._fig.canvas.manager.set_window_title('MPC Local Map + Yaw Debug')
             except Exception:
                 pass
             self._init_figure()
@@ -433,7 +446,7 @@ class MPCDebugPlotter2D:
             print(f'[MPCDebugPlotter2D] Disabled (matplotlib init failed): {e}')
 
     def _init_figure(self) -> None:
-        ax = self._ax
+        ax = self._ax_map
         ax.set_title('Top view (world XY)')
         ax.set_xlabel('X [m]')
         ax.set_ylabel('Y [m]')
@@ -450,6 +463,25 @@ class MPCDebugPlotter2D:
             fontsize=11, color='tab:green', fontweight='bold'
         )
         ax.legend(loc='best', fontsize=8)
+
+        err_ax = self._ax_err
+        err_ax.set_title('Tracking Error vs Time')
+        err_ax.set_xlabel('Time [s]')
+        err_ax.set_ylabel('Error')
+        err_ax.grid(True, alpha=0.3)
+        self._artists['err'], = err_ax.plot([], [], color='tab:orange', lw=2, label='position error [m]')
+        self._artists['yaw_err'], = err_ax.plot([], [], color='tab:purple', lw=2, label='yaw error [rad]')
+        err_ax.legend(loc='best', fontsize=8)
+
+        ax3 = self._ax_3d
+        ax3.set_title('3D view (x, y, yaw)')
+        ax3.set_xlabel('X [m]')
+        ax3.set_ylabel('Y [m]')
+        ax3.set_zlabel('Yaw [rad]')
+        self._artists['path3d'], = ax3.plot([], [], [], 'k-', lw=1.5, alpha=0.8)
+        self._artists['pred3d'], = ax3.plot([], [], [], 'b.-', lw=1.5, ms=5)
+        self._artists['cur3d'], = ax3.plot([], [], [], 'go', ms=7)
+        self._artists['goal3d'], = ax3.plot([], [], [], 'r*', ms=12)
         self._fig.tight_layout()
 
     def submit(self,
@@ -458,6 +490,8 @@ class MPCDebugPlotter2D:
                X_opt: np.ndarray,
                x_min: np.ndarray | None,
                obs_pts: np.ndarray | None = None,
+               t_now: float | None = None,
+               yaw_ref: float | None = None,
                goal_reached: bool = False,
                dist_goal: float | None = None) -> None:
         if not self._enabled:
@@ -467,11 +501,18 @@ class MPCDebugPlotter2D:
             'x0':           np.array(x0[:2],    dtype=float, copy=True),
             'x_ref':        np.array(x_ref[:2],  dtype=float, copy=True),
             'x_pred':       np.array(X_opt[:, :2], dtype=float, copy=True),
+            'yaw0':         float(x0[2]),
+            'yaw_ref':      float(x_ref[2] if yaw_ref is None else yaw_ref),
+            'yaw_pred':     np.array(X_opt[:, 2], dtype=float, copy=True),
             'x_min':        None if x_min is None else np.array(x_min[:2], dtype=float, copy=True),
             'obs':          None if obs_pts is None else np.array(obs_pts[:, :2], dtype=float, copy=True),
             'goal_reached': bool(goal_reached),
             'dist_goal':    None if dist_goal is None else float(dist_goal),
         }
+        if t_now is not None and dist_goal is not None:
+            self._time_hist.append(float(t_now))
+            self._err_hist.append(float(dist_goal))
+            self._yaw_err_hist.append(float(abs(self._wrap_pi(self._latest['yaw_ref'] - self._latest['yaw0']))))
 
     def draw_latest(self) -> None:
         if not self._enabled or self._latest is None:
@@ -496,6 +537,24 @@ class MPCDebugPlotter2D:
             self._artists['obs'].set_offsets(snap['obs'])
         else:
             self._artists['obs'].set_offsets(np.zeros((0, 2)))
+        if self._time_hist:
+            t = np.array(self._time_hist, dtype=float)
+            self._artists['err'].set_data(t, np.array(self._err_hist, dtype=float))
+            self._artists['yaw_err'].set_data(t, np.array(self._yaw_err_hist, dtype=float))
+            self._ax_err.relim()
+            self._ax_err.autoscale_view()
+        if path_hist is not None and path_hist.size:
+            z_hist = np.zeros(path_hist.shape[0], dtype=float)
+            if len(self._yaw_err_hist) == path_hist.shape[0]:
+                z_hist = np.array([snap['yaw0']] * path_hist.shape[0], dtype=float)
+            self._artists['path3d'].set_data(path_hist[:, 0], path_hist[:, 1])
+            self._artists['path3d'].set_3d_properties(z_hist)
+        self._artists['pred3d'].set_data(snap['x_pred'][:, 0], snap['x_pred'][:, 1])
+        self._artists['pred3d'].set_3d_properties(snap['yaw_pred'])
+        self._artists['cur3d'].set_data([snap['x0'][0]], [snap['x0'][1]])
+        self._artists['cur3d'].set_3d_properties([snap['yaw0']])
+        self._artists['goal3d'].set_data([snap['x_ref'][0]], [snap['x_ref'][1]])
+        self._artists['goal3d'].set_3d_properties([snap['yaw_ref']])
         if snap['goal_reached']:
             d = snap['dist_goal']
             self._artists['msg'].set_text(
@@ -503,10 +562,16 @@ class MPCDebugPlotter2D:
             )
         else:
             self._artists['msg'].set_text('')
-        self._ax.relim()
-        self._ax.autoscale_view()
+        self._ax_map.relim()
+        self._ax_map.autoscale_view()
+        self._ax_3d.relim()
+        self._ax_3d.autoscale_view()
         self._fig.canvas.draw_idle()
         self._plt.pause(0.001)
+
+    @staticmethod
+    def _wrap_pi(angle: float) -> float:
+        return float((angle + np.pi) % (2.0 * np.pi) - np.pi)
 
     def close(self) -> None:
         if self._enabled and self._plt is not None and self._fig is not None:
@@ -523,8 +588,8 @@ class MPCPlanner:
       - linearised obstacle constraints around previous trajectory,
       - trust-region accept/reject update using delta and delta_hat.
 
-    State  : [x, y, vx, vy]
-    Control: [ax, ay]
+    State  : [x, y, yaw, vx, vy]
+    Control: [ax, ay, yaw_rate]
     """
 
     def __init__(self, backend: str = DEFAULT_MPC_SOLVER_BACKEND):
@@ -570,12 +635,13 @@ class MPCPlanner:
 
     @staticmethod
     def _rollout(x0: np.ndarray, U: np.ndarray) -> np.ndarray:
-        """Rollout double-integrator dynamics. State: [x, y, vx, vy]. Control: [ax, ay]."""
-        X = np.zeros((T_horizon + 1, 4), dtype=float)
+        """Rollout dynamics. State: [x, y, yaw, vx, vy]. Control: [ax, ay, yaw_rate]."""
+        X = np.zeros((T_horizon + 1, 5), dtype=float)
         X[0] = x0
         for k in range(T_horizon):
-            X[k + 1, :2] = X[k, :2] + Ts * X[k, 2:4]
-            X[k + 1, 2:4] = X[k, 2:4] + Ts * U[k]
+            X[k + 1, :2] = X[k, :2] + Ts * X[k, 3:5]
+            X[k + 1, 2] = X[k, 2] + Ts * U[k, 2]
+            X[k + 1, 3:5] = X[k, 3:5] + Ts * U[k, :2]
         return X
 
     @staticmethod
@@ -605,6 +671,10 @@ class MPCPlanner:
             return arr
         raise ValueError(f'Expected x_obs shape (K,2), got {arr.shape}')
 
+    @staticmethod
+    def _wrap_pi(angle: float) -> float:
+        return float((angle + np.pi) % (2.0 * np.pi) - np.pi)
+
     def _phi_real(
         self,
         X: np.ndarray,
@@ -617,10 +687,11 @@ class MPCPlanner:
         x_obs = self._normalize_x_obs(x_obs)
         # Terminal tracking (L1 in position and velocity)
         eqns  = self._sum_abs(X[-1, :2] - x_ref[:2])
-        eqns += self._sum_abs(X[-1, 2:4] - x_ref[2:4])
+        eqns += YAW_ERROR_WEIGHT * abs(self._wrap_pi(float(X[-1, 2] - x_ref[2])))
+        eqns += self._sum_abs(X[-1, 3:5] - x_ref[3:5])
         # Control and velocity bound violations
         ineq_u = np.sum(self._hinge(np.abs(U) - U_LIMS[None, :]))
-        ineq_v = np.sum(self._hinge(np.abs(X[1:, 2:4]) - VEL_LIMS[None, :]))
+        ineq_v = np.sum(self._hinge(np.abs(X[1:, 3:5]) - VEL_LIMS[None, :]))
         # Obstacle clearance
         ineq_obs = 0.0
         if x_obs is not None:
@@ -628,11 +699,14 @@ class MPCPlanner:
             dist = np.linalg.norm(d, axis=2)
             ineq_obs = float(np.sum(self._hinge(MIN_CLEARANCE - dist)))
         # Control effort
-        obj = float(Ts * np.sum(U * U))
+        obj = float(Ts * (np.sum(U[:, :2] * U[:, :2]) + YAW_RATE_WEIGHT * np.sum(U[:, 2] * U[:, 2])))
         # Optional lane-centring term
         if x_ref_path is not None and x_ref_path.size:
             lane_err = X[1:, :2] - np.asarray(x_ref_path, dtype=float)
             obj += float(LANE_CENTER_WEIGHT * Ts * np.sum(lane_err * lane_err))
+        yaw_path = np.arctan2(X[1:, 4], X[1:, 3])
+        yaw_err = np.arctan2(np.sin(yaw_path - X[1:, 2]), np.cos(yaw_path - X[1:, 2]))
+        obj += float(YAW_ERROR_WEIGHT * Ts * np.sum(yaw_err * yaw_err))
         return obj + SCP_LAMBDA * (eqns + float(ineq_u) + float(ineq_v) + ineq_obs)
 
     def _phi_hat(
@@ -650,9 +724,10 @@ class MPCPlanner:
         """Convexified objective phi_hat(X, U) around (X_now, U_now)."""
         x_obs = self._normalize_x_obs(x_obs)
         eqns  = self._sum_abs(X[-1, :2] - x_ref[:2])
-        eqns += self._sum_abs(X[-1, 2:4] - x_ref[2:4])
+        eqns += YAW_ERROR_WEIGHT * abs(self._wrap_pi(float(X[-1, 2] - x_ref[2])))
+        eqns += self._sum_abs(X[-1, 3:5] - x_ref[3:5])
         ineq_u    = np.sum(self._hinge(np.abs(U) - U_LIMS[None, :]))
-        ineq_v    = np.sum(self._hinge(np.abs(X[1:, 2:4]) - VEL_LIMS[None, :]))
+        ineq_v    = np.sum(self._hinge(np.abs(X[1:, 3:5]) - VEL_LIMS[None, :]))
         ineq_tr_u = np.sum(self._hinge(np.abs(U - U_now) - l_u))
         ineq_tr_x = np.sum(self._hinge(np.abs(X[1:, :2] - X_now[1:, :2]) - l_pos))
         # Linearised obstacle term
@@ -663,10 +738,13 @@ class MPCPlanner:
             d          = X[1:, None, :2] - x_obs[None, :, :]
             lin_obs    = MIN_CLEARANCE * d_now_norm - np.sum(d_now * d, axis=2)
             ineq_obs   = float(np.sum(self._hinge(lin_obs)))
-        obj = float(Ts * np.sum(U * U))
+        obj = float(Ts * (np.sum(U[:, :2] * U[:, :2]) + YAW_RATE_WEIGHT * np.sum(U[:, 2] * U[:, 2])))
         if x_ref_path is not None and x_ref_path.size:
             lane_err = X[1:, :2] - np.asarray(x_ref_path, dtype=float)
             obj += float(LANE_CENTER_WEIGHT * Ts * np.sum(lane_err * lane_err))
+        yaw_path = np.arctan2(X[1:, 4], X[1:, 3])
+        yaw_err = np.arctan2(np.sin(yaw_path - X[1:, 2]), np.cos(yaw_path - X[1:, 2]))
+        obj += float(YAW_ERROR_WEIGHT * Ts * np.sum(yaw_err * yaw_err))
         ineq = float(ineq_u + ineq_v + ineq_tr_u + ineq_tr_x) + ineq_obs
         return obj + SCP_LAMBDA * (eqns + ineq)
 
@@ -688,7 +766,9 @@ class MPCPlanner:
         """
         x_obs = self._normalize_x_obs(x_obs)
         X    = self._rollout(x0, U)
-        grad = 2.0 * Ts * U   # ∂(Ts*||U||²)/∂U
+        grad = np.zeros_like(U)
+        grad[:, :2] = 2.0 * Ts * U[:, :2]
+        grad[:, 2] = 2.0 * Ts * YAW_RATE_WEIGHT * U[:, 2]
 
         # Lane-centring gradient
         if x_ref_path is not None and np.size(x_ref_path):
@@ -706,8 +786,11 @@ class MPCPlanner:
             grad[j] += SCP_LAMBDA * w * sign_pos
 
         # Terminal velocity L1
-        sign_vel = np.sign(X[-1, 2:4] - x_ref[2:4])
-        grad += SCP_LAMBDA * Ts * sign_vel[None, :]
+        yaw_terminal_err = self._wrap_pi(float(X[-1, 2] - x_ref[2]))
+        grad[:, 2] += SCP_LAMBDA * YAW_ERROR_WEIGHT * Ts * np.sign(yaw_terminal_err)
+
+        sign_vel = np.sign(X[-1, 3:5] - x_ref[3:5])
+        grad[:, :2] += SCP_LAMBDA * Ts * sign_vel[None, :]
 
         # Control bound hinge
         viol_u = np.abs(U) - U_LIMS[None, :]
@@ -715,14 +798,14 @@ class MPCPlanner:
 
         # Velocity bound hinge — propagate back through dynamics
         for k in range(1, T_horizon + 1):
-            v_k    = X[k, 2:4]
+            v_k    = X[k, 3:5]
             mask_v = (np.abs(v_k) - VEL_LIMS) > 0.0
             if not np.any(mask_v):
                 continue
             g_v = np.zeros(2, dtype=float)
             g_v[mask_v] = np.sign(v_k[mask_v])
             for j in range(k):
-                grad[j] += SCP_LAMBDA * Ts * g_v
+                grad[j, :2] += SCP_LAMBDA * Ts * g_v
 
         # Control trust-region hinge
         viol_tr_u = np.abs(U - U_now) - l_u
@@ -770,42 +853,21 @@ class MPCPlanner:
 
         Parameters
         ----------
-        x0         : (4,) current state [x, y, vx, vy]
-        x_ref      : (4,) terminal reference [x_goal, y_goal, vx_ref, vy_ref]
+        x0         : (5,) current state [x, y, yaw, vx, vy]
+        x_ref      : (5,) terminal reference [x_goal, y_goal, yaw_ref, vx_ref, vy_ref]
         x_obs      : (K, 2) nearest obstacle XY positions, or None
-        U_warm     : (T, 2) warm-start control sequence [ax, ay]
+        U_warm     : (T, 3) warm-start control sequence [ax, ay, yaw_rate]
         x_ref_path : (T, 2) per-step lane-centre reference, or None
 
         Returns
         -------
-        U_opt : (T, 2) optimised controls
-        X_opt : (T+1, 4) optimised state trajectory
+        U_opt : (T, 3) optimised controls
+        X_opt : (T+1, 5) optimised state trajectory
         """
-        # Native backends (no lane-path support yet → fall back to Python)
-        if x_ref_path is not None and np.size(x_ref_path) and self.backend_name != 'python':
-            self.last_solver_status = f'{self.backend_name}|lane_path_python_fallback'
-        elif self.backend_name == 'cpp_osqp':
-            native_x_obs = None if x_obs is None else np.asarray(x_obs, dtype=float)
-            if native_x_obs is not None and native_x_obs.ndim == 2:
-                native_x_obs = native_x_obs[0]
-            U_opt, X_opt, status = solve_native_osqp(
-                x0=x0, x_ref=x_ref, x_obs=native_x_obs,
-                u_warm=U_warm, config=self._native_solver_config(),
-            )
-            self.last_solver_status = status
-            return U_opt, X_opt
-
-        if x_ref_path is None or not np.size(x_ref_path):
-            if self.backend_name == 'cpp_subgradient':
-                native_x_obs = None if x_obs is None else np.asarray(x_obs, dtype=float)
-                if native_x_obs is not None and native_x_obs.ndim == 2:
-                    native_x_obs = native_x_obs[0]
-                U_opt, X_opt, status = solve_native_subgradient(
-                    x0=x0, x_ref=x_ref, x_obs=native_x_obs,
-                    u_warm=U_warm, config=self._native_solver_config(),
-                )
-                self.last_solver_status = status
-                return U_opt, X_opt
+        # Native backends still implement the old 4-state model, so the yaw-augmented
+        # planner always runs through the Python path for now.
+        if self.backend_name != 'python':
+            self.last_solver_status = f'{self.backend_name}|yaw_python_fallback'
 
         # Python SCP loop
         U_now = U_warm.copy()
@@ -878,14 +940,21 @@ class MPCPlanner:
         X_pos = cp.Variable((T_horizon + 1, 2))
         X_vel = cp.Variable((T_horizon + 1, 2))
 
-        constraints = [X_pos[0] == x0[:2], X_vel[0] == x0[2:4]]
+        X_yaw = cp.Variable(T_horizon + 1)
+
+        constraints = [X_pos[0] == x0[:2], X_yaw[0] == x0[2], X_vel[0] == x0[3:5]]
         for k in range(T_horizon):
             constraints += [
                 X_pos[k + 1] == X_pos[k] + Ts * X_vel[k],
-                X_vel[k + 1] == X_vel[k] + Ts * U[k],
+                X_yaw[k + 1] == X_yaw[k] + Ts * U[k, 2],
+                X_vel[k + 1] == X_vel[k] + Ts * U[k, :2],
             ]
 
-        eq_term   = cp.norm1(X_pos[-1] - x_ref[:2]) + cp.norm1(X_vel[-1] - x_ref[2:4])
+        eq_term   = (
+            cp.norm1(X_pos[-1] - x_ref[:2])
+            + YAW_ERROR_WEIGHT * cp.abs(X_yaw[-1] - x_ref[2])
+            + cp.norm1(X_vel[-1] - x_ref[3:5])
+        )
         ineq_u    = cp.sum(cp.pos(cp.abs(U)          - U_LIMS[None, :]))
         ineq_v    = cp.sum(cp.pos(cp.abs(X_vel[1:])  - VEL_LIMS[None, :]))
         ineq_tr_u = cp.sum(cp.pos(cp.abs(U - U_now)  - l_u))
@@ -909,7 +978,8 @@ class MPCPlanner:
                  * cp.sum_squares(X_pos[1:] - np.asarray(x_ref_path, dtype=float))
         )
         objective = cp.Minimize(
-            Ts * cp.sum_squares(U)
+            Ts * cp.sum_squares(U[:, :2])
+            + YAW_RATE_WEIGHT * Ts * cp.sum_squares(U[:, 2])
             + lane_term
             + SCP_LAMBDA * (eq_term + ineq_u + ineq_v + ineq_tr_u + ineq_tr_x + ineq_obs)
         )
@@ -1022,8 +1092,8 @@ class MPCUAVNode(Node):
     """
     ROS2 node: GEM perception + 2D MPC trajectory planning.
 
-    State  : [x, y, vx, vy]   (world frame, metres / m·s⁻¹)
-    Control: [ax, ay]          (world frame, m·s⁻²)
+    State  : [x, y, yaw, vx, vy]   (world frame, metres / m·s⁻¹)
+    Control: [ax, ay, yaw_rate]     (world frame, m·s⁻² and rad/s)
     Output : AckermannDrive    (speed + steering angle)
     """
 
@@ -1105,13 +1175,12 @@ class MPCUAVNode(Node):
             max_workers=1, thread_name_prefix='mpc_2d')
         self._solver_future: Future | None = None
 
-        # [x, y, vx, vy] — 2D world-frame state
-        self._x_state = np.zeros(4, dtype=float)
-        # current heading (used only for sensor-frame transforms, not in MPC state)
+        # [x, y, yaw, vx, vy] — 2D pose and velocity with heading in MPC state
+        self._x_state = np.zeros(5, dtype=float)
         self._yaw: float = 0.0
 
-        # warm-start control sequence [ax, ay]
-        self._U_warm = np.zeros((T_horizon, 2), dtype=float)
+        # warm-start control sequence [ax, ay, yaw_rate]
+        self._U_warm = np.zeros((T_horizon, 3), dtype=float)
 
         # navigation goal [x, y] in world frame
         self._goal_xy = np.array([20.0, 0.0], dtype=float)
@@ -1128,8 +1197,8 @@ class MPCUAVNode(Node):
         self._setpoint_pub_dt: deque = deque(maxlen=RATE_WINDOW_LEN)
 
         # latest commands (re-published at fixed rate independent of solve time)
-        self._latest_vel_sp = np.zeros(2, dtype=float)   # [vx_cmd, vy_cmd]
-        self._last_u_cmd    = np.zeros(2, dtype=float)   # used for delay compensation
+        self._latest_vel_sp = np.zeros(3, dtype=float)   # [vx_cmd, vy_cmd, yaw_rate_cmd]
+        self._last_u_cmd    = np.zeros(3, dtype=float)   # used for delay compensation
 
         # lane tracking state
         self._lane_path_world: np.ndarray = np.zeros((0, 2), dtype=float)
@@ -1174,7 +1243,7 @@ class MPCUAVNode(Node):
         pos   = msg.pose.pose.position
         twist = msg.twist.twist.linear
         self._x_state = np.array(
-            [float(pos.x), float(pos.y), float(twist.x), float(twist.y)],
+            [float(pos.x), float(pos.y), self._yaw, float(twist.x), float(twist.y)],
             dtype=float,
         )
 
@@ -1261,8 +1330,9 @@ class MPCUAVNode(Node):
         if bool(self.get_parameter('enable_delay_compensation').value):
             tau = max(0.0, float(self.get_parameter('delay_compensation_sec').value))
             if tau > 0.0:
-                x0[:2] += tau * self._last_u_cmd          # position
-                x0[2:4] = self._last_u_cmd                # velocity
+                x0[:2] += tau * self._last_u_cmd[:2]      # position
+                x0[2] = self._wrap_pi(x0[2] + tau * self._last_u_cmd[2])
+                x0[3:5] = self._last_u_cmd[:2]            # velocity
             if not self._warned_delay_compensation_enabled:
                 self.get_logger().warn('Delay compensation is ON.')
                 self._warned_delay_compensation_enabled = True
@@ -1279,8 +1349,10 @@ class MPCUAVNode(Node):
         elif not goal_reached:
             self._goal_reached_announced = False
 
-        # Terminal reference: goal position, zero terminal velocity
-        x_ref = np.array([self._goal_xy[0], self._goal_xy[1], 0.0, 0.0], dtype=float)
+        yaw_ref = self._goal_yaw_reference(lane_path_world=self._lane_path_world)
+
+        # Terminal reference: goal position, desired heading, zero terminal velocity
+        x_ref = np.array([self._goal_xy[0], self._goal_xy[1], yaw_ref, 0.0, 0.0], dtype=float)
 
         # Lane path (or None if stale/unavailable)
         lane_path = self._lane_path_for_solver(now)
@@ -1312,6 +1384,7 @@ class MPCUAVNode(Node):
             'x_obs':            x_obs,
             'lane_path':        lane_path,
             'x_ref':            x_ref,
+            't_now':            float(now.nanoseconds) * 1e-9,
         }
 
     def _solve_mpc_request(self, req: dict) -> dict:
@@ -1327,9 +1400,10 @@ class MPCUAVNode(Node):
         U_warm_next[-1] = U_opt[-1]
 
         # First-step velocity from the optimised trajectory
-        vel_cmd = np.array(X_opt[1, 2:4], dtype=float) if X_opt.shape[0] > 1 else (
-            req['x0'][2:4] + Ts * U_opt[0])
+        vel_cmd = np.array(X_opt[1, 3:5], dtype=float) if X_opt.shape[0] > 1 else (
+            req['x0'][3:5] + Ts * U_opt[0, :2])
         np.clip(vel_cmd, -V_MAX, V_MAX, out=vel_cmd)
+        yaw_rate_cmd = float(U_opt[0, 2]) if U_opt.shape[0] > 0 else 0.0
 
         # Waypoints for label publishing
         label_wps = X_opt[1:1 + MPC_LABEL_WAYPOINT_COUNT, :2]
@@ -1341,7 +1415,7 @@ class MPCUAVNode(Node):
             'dist_goal':        req['dist_goal'],
             'X_opt':            X_opt,
             'U_warm_next':      U_warm_next,
-            'vel_cmd':          vel_cmd,
+            'vel_cmd':          np.array([vel_cmd[0], vel_cmd[1], yaw_rate_cmd], dtype=float),
             'label_wps':        label_wps,
             'obs_snapshot':     req['obs_snapshot'],
             'stamp_msg':        req['stamp_msg'],
@@ -1351,6 +1425,7 @@ class MPCUAVNode(Node):
             'x_ref':            req['x_ref'],
             'x_min':            req['x_min'],
             'x_min_debug':      req['x_min_debug'],
+            't_now':            req['t_now'],
         }
 
     def _consume_solver_result(self) -> None:
@@ -1397,6 +1472,8 @@ class MPCUAVNode(Node):
             x0=res['x0'], x_ref=res['x_ref'], X_opt=res['X_opt'],
             x_min=res['x_min_debug'],
             obs_pts=res['obs_snapshot'],
+            t_now=res['t_now'],
+            yaw_ref=float(res['x_ref'][2]),
             goal_reached=bool(res['goal_reached']),
             dist_goal=float(res['dist_goal']),
         )
@@ -1409,11 +1486,12 @@ class MPCUAVNode(Node):
             sp_hz = self._timer_rate_hz(self._setpoint_pub_dt)
             self.get_logger().info(
                 f'pos=[{x0[0]:.2f},{x0[1]:.2f}] '
-                f'vel=[{x0[2]:.2f},{x0[3]:.2f}] '
+                f'yaw={x0[2]:.2f} '
+                f'vel=[{x0[3]:.2f},{x0[4]:.2f}] '
                 f'goal=[{x_ref[0]:.2f},{x_ref[1]:.2f}] '
                 f'dist_goal={res["dist_goal"]:.2f}m '
                 f'dist_obs={d_obs:.2f}m '
-                f'vel_cmd=[{self._latest_vel_sp[0]:.2f},{self._latest_vel_sp[1]:.2f}] '
+                f'cmd=[{self._latest_vel_sp[0]:.2f},{self._latest_vel_sp[1]:.2f},{self._latest_vel_sp[2]:.2f}] '
                 f'solver={res["solver_status"]} '
                 f'solve_ms={1000*res["solve_sec"]:.0f} '
                 f'sp_rate={"n/a" if sp_hz is None else f"{sp_hz:.1f}"}Hz'
@@ -1459,8 +1537,19 @@ class MPCUAVNode(Node):
             return x_ref
         speed         = min(self._gem_max_speed_mps, LANE_HEADING_REF_SPEED_MPS)
         x_ref_out     = x_ref.copy()
-        x_ref_out[2:4] = speed * tangent / tangent_norm
+        x_ref_out[2] = float(np.arctan2(tangent[1], tangent[0]))
+        x_ref_out[3:5] = speed * tangent / tangent_norm
         return x_ref_out
+
+    def _goal_yaw_reference(self, lane_path_world: np.ndarray | None) -> float:
+        if lane_path_world is not None and lane_path_world.shape[0] >= 2:
+            tangent = np.asarray(lane_path_world[-1] - lane_path_world[-2], dtype=float)
+            if np.linalg.norm(tangent) > 1e-6:
+                return float(np.arctan2(tangent[1], tangent[0]))
+        delta_goal = np.asarray(self._goal_xy - self._x_state[:2], dtype=float)
+        if np.linalg.norm(delta_goal) > 1e-6:
+            return float(np.arctan2(delta_goal[1], delta_goal[0]))
+        return float(self._yaw)
 
     def _publish_lane_reference(self, path_xy: np.ndarray, stamp_msg) -> None:
         if path_xy.shape[0] == 0:
@@ -1489,6 +1578,7 @@ class MPCUAVNode(Node):
     def _publish_ackermann(self, vel_world: np.ndarray) -> None:
         """Convert world-frame velocity command to AckermannDrive."""
         vx, vy = float(vel_world[0]), float(vel_world[1])
+        yaw_rate_cmd = float(vel_world[2]) if vel_world.shape[0] > 2 else 0.0
         speed_mag = float(np.hypot(vx, vy))
         if speed_mag < 1e-3:
             target_speed = 0.0
@@ -1500,7 +1590,7 @@ class MPCUAVNode(Node):
             target_speed = float(np.clip(forward, -self._gem_max_speed_mps, self._gem_max_speed_mps))
             desired_heading = float(np.arctan2(vy, vx))
             heading_error   = self._wrap_pi(desired_heading - self._yaw)
-            yaw_rate_cmd    = self._gem_steering_kp * heading_error
+            yaw_rate_cmd    = yaw_rate_cmd + self._gem_steering_kp * heading_error
             steer_speed     = max(abs(target_speed), 0.25)
             steering = float(np.clip(
                 np.arctan2(self._gem_wheelbase_m * yaw_rate_cmd, steer_speed),
