@@ -183,7 +183,7 @@ class LaneVisualizer(Node):
 
         # hint: find derivative of the polynomial at the closest point
         #       then use arctan on the scaled slope
-        dpoly_dy_px = float(np.polyder(poly_px)(closest_px[1]))
+        dpoly_dy_px = float(np.polyval(np.polyder(poly_px), closest_px[1]))
         dpoly_dx_m = dpoly_dy_px * (Sx / Sy)
         HE = float(np.arctan(dpoly_dx_m))
 

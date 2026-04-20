@@ -1,8 +1,5 @@
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
-import pickle
 
 # feel free to adjust the parameters in the code if necessary
 
@@ -12,6 +9,8 @@ def viz1(binary_warped, ret, save_file=None):
 	Visualize each sliding window location and predicted lane lines, on binary warped image
 	save_file is a string representing where to save the image (if None, then just display)
 	"""
+	import matplotlib.pyplot as plt
+
 	# Grab variables from ret dictionary
 	left_fit = ret['left_fit']
 	right_fit = ret['right_fit']
@@ -166,8 +165,13 @@ def lane_fit(binary_warped, nwindows=20, margin=50, minpix=10):
     1. Momentum-based tracking (handles gaps).
     2. Overlap prevention (windows physically cannot cross).
     3. Robust error handling.
-    """    
-    histogram = np.sum(binary_warped[binary_warped.shape[0]//2:, :], axis=0)
+    """
+    bottom_half = binary_warped[binary_warped.shape[0]//2:, :]
+    histogram = np.sum(bottom_half, axis=0)
+    hist_source = "bottom_half"
+    if not np.any(histogram):
+        histogram = np.sum(binary_warped, axis=0)
+        hist_source = "full_image"
     
     midpoint = int(histogram.shape[0] / 2)
     leftx_base = np.argmax(histogram[:midpoint])
@@ -178,6 +182,9 @@ def lane_fit(binary_warped, nwindows=20, margin=50, minpix=10):
     nonzero = binary_warped.nonzero()
     nonzeroy = np.array(nonzero[0])
     nonzerox = np.array(nonzero[1])
+    if nonzerox.size == 0:
+        print("Error: No lane pixels found. total_pixels=0")
+        return None
 
     left_lane_inds = []
     right_lane_inds = []
@@ -225,12 +232,22 @@ def lane_fit(binary_warped, nwindows=20, margin=50, minpix=10):
         else:
             right_x_current += right_momentum
 
-    try:
-        left_lane_inds = np.concatenate(left_lane_inds)
-        right_lane_inds = np.concatenate(right_lane_inds)
-    except ValueError:
-        print("Error: No lane pixels found.")
+    left_count = sum(len(inds) for inds in left_lane_inds)
+    right_count = sum(len(inds) for inds in right_lane_inds)
+    if not left_lane_inds or not right_lane_inds:
+        bottom_pixels = int(np.count_nonzero(bottom_half))
+        print(
+            "Error: No lane pixels found. "
+            f"total_pixels={nonzerox.size} bottom_pixels={bottom_pixels} "
+            f"hist_source={hist_source} "
+            f"left_base={leftx_base} right_base={rightx_base} "
+            f"left_windows={len(left_lane_inds)} right_windows={len(right_lane_inds)} "
+            f"left_pixels={left_count} right_pixels={right_count}"
+        )
         return None
+
+    left_lane_inds = np.concatenate(left_lane_inds)
+    right_lane_inds = np.concatenate(right_lane_inds)
 
     leftx = nonzerox[left_lane_inds]
     lefty = nonzeroy[left_lane_inds]

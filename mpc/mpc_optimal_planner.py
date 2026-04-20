@@ -96,6 +96,7 @@ RGB_IMG_HEIGHT = 600
 
 LANE_REFERENCE_TOPIC         = '/mpc/lane_reference'
 LANE_MASK_TOPIC              = '/mpc/lane_mask'
+LANE_BEV_MASK_TOPIC          = '/mpc/lane_bev_mask'
 DEFAULT_GEM_RGB_TOPIC        = '/camera/image_raw'
 DEFAULT_ENABLE_LANE_TRACKING = True
 DEFAULT_LANE_MODEL_PATH      = os.path.join('lane_Segmentation', 'data', 'checkpoints', 'epoch100.pth')
@@ -116,6 +117,7 @@ SETPOINT_LOG_EVERY_N  = 10    # print debug every N control ticks
 DEBUG_PLOT_ENABLED    = False
 DEBUG_PLOT_RATE_HZ    = 5.0
 DEBUG_PLOT_OBS_MAX    = 200
+DEBUG_PLOT_BACKEND    = 'TkAgg'
 DEBUG_PATH_HISTORY_LEN = 300
 
 DEPTH_FILTER_MIN_FORWARD_M  = 0.35
@@ -204,6 +206,11 @@ class LaneCenterDetector:
                 self._node.get_logger().warn(
                     f'Failed to load BEV config {bev_path}: {exc}; using built-in defaults.'
                 )
+        self._node.get_logger().info(
+            f'Lane BEV config: world_dim={self._bev_cfg.get("bev_world_dim")} '
+            f'unit_conversion={self._bev_cfg.get("unit_conversion_factor")} '
+            f'src={self._bev_cfg.get("src")}'
+        )
 
         model_path = str(self._node.get_parameter('lane_model_path').value)
         if model_path:
@@ -252,9 +259,17 @@ class LaneCenterDetector:
         warped, _, _ = perspective_transform(binary, np.float32(self._bev_cfg['src']))
         fit = lane_fit(warped)
         if fit is None:
+            binary_pixels = int(np.count_nonzero(binary))
+            warped_pixels = int(np.count_nonzero(warped))
+            self._node.get_logger().warn(
+                f'Lane fit failed: binary_pixels={binary_pixels} '
+                f'warped_pixels={warped_pixels} image_shape={image.shape[:2]} '
+                f'bev_src={self._bev_cfg.get("src")}'
+            )
             return {
                 'stamp': msg.header.stamp,
                 'mask': binary,
+                'bev_mask': warped,
                 'path_body': np.zeros((0, 2), dtype=float),
                 'path_world': np.zeros((0, 2), dtype=float),
                 'confidence': 0.0,
@@ -269,7 +284,21 @@ class LaneCenterDetector:
         )
         path_body = self._centerline_poly_to_body_points(center_fit)
         if path_body.shape[0] < LANE_MIN_POINTS:
-            return None
+            self._node.get_logger().warn(
+                f'Lane centerline rejected: points={path_body.shape[0]} '
+                f'required={LANE_MIN_POINTS}'
+            )
+            return {
+                'stamp': msg.header.stamp,
+                'mask': binary,
+                'bev_mask': warped,
+                'path_body': np.zeros((0, 2), dtype=float),
+                'path_world': np.zeros((0, 2), dtype=float),
+                'confidence': 0.0,
+                'xte_m': None,
+                'heading_error_rad': None,
+                'path_heading_world_rad': None,
+            }
 
         xte_m, heading_error_rad = self._compute_error(center_fit)
 
@@ -284,6 +313,7 @@ class LaneCenterDetector:
         return {
             'stamp': msg.header.stamp,
             'mask': binary,
+            'bev_mask': warped,
             'path_body': path_body,
             'path_world': path_world,
             'confidence': confidence,
@@ -328,7 +358,7 @@ class LaneCenterDetector:
         if closest_m[0] < camera_m[0]:
             xte_m = -xte_m
 
-        slope_px = float(np.polyder(poly_px)(closest_px[1]))
+        slope_px = float(np.polyval(np.polyder(poly_px), closest_px[1]))
         heading_error_rad = float(np.arctan(slope_px * (meters_per_pixel_x / meters_per_pixel_y)))
         return xte_m, heading_error_rad
 
@@ -405,8 +435,10 @@ class MPCDebugPlotter2D:
     def __init__(self,
                  enabled: bool = DEBUG_PLOT_ENABLED,
                  rate_hz: float = DEBUG_PLOT_RATE_HZ,
+                 backend: str = DEBUG_PLOT_BACKEND,
                  path_history_len: int = DEBUG_PATH_HISTORY_LEN):
         self._enabled = bool(enabled)
+        self._backend = str(backend).strip()
         self._latest: dict | None = None
         self._path_hist = deque(maxlen=path_history_len)
         self._plt = None
@@ -418,6 +450,9 @@ class MPCDebugPlotter2D:
             return
 
         try:
+            if self._backend:
+                import matplotlib
+                matplotlib.use(self._backend, force=True)
             import matplotlib.pyplot as plt
             self._plt = plt
             self._plt.ion()
@@ -467,11 +502,21 @@ class MPCDebugPlotter2D:
             'x0':           np.array(x0[:2],    dtype=float, copy=True),
             'x_ref':        np.array(x_ref[:2],  dtype=float, copy=True),
             'x_pred':       np.array(X_opt[:, :2], dtype=float, copy=True),
-            'x_min':        None if x_min is None else np.array(x_min[:2], dtype=float, copy=True),
+            'x_min':        self._point_or_none(x_min),
             'obs':          None if obs_pts is None else np.array(obs_pts[:, :2], dtype=float, copy=True),
             'goal_reached': bool(goal_reached),
             'dist_goal':    None if dist_goal is None else float(dist_goal),
         }
+
+    @staticmethod
+    def _point_or_none(point: np.ndarray | None) -> np.ndarray | None:
+        if point is None:
+            return None
+        arr = np.asarray(point, dtype=float)
+        if arr.size < 2:
+            return None
+        arr = arr.reshape(-1)
+        return np.array(arr[:2], dtype=float, copy=True)
 
     def draw_latest(self) -> None:
         if not self._enabled or self._latest is None:
@@ -1050,6 +1095,10 @@ class MPCUAVNode(Node):
         self.declare_parameter('goal_reached_threshold_m',    GOAL_REACHED_THRESHOLD_M)
         self.declare_parameter('enable_delay_compensation',   ENABLE_DELAY_COMPENSATION)
         self.declare_parameter('delay_compensation_sec',      DELAY_COMPENSATION_SEC)
+        self.declare_parameter('enable_debug_plot',           DEBUG_PLOT_ENABLED)
+        self.declare_parameter('debug_plot_rate_hz',          DEBUG_PLOT_RATE_HZ)
+        self.declare_parameter('debug_plot_obs_max',          DEBUG_PLOT_OBS_MAX)
+        self.declare_parameter('debug_plot_backend',          DEBUG_PLOT_BACKEND)
         self.declare_parameter('goal_x', 32.91)
         self.declare_parameter('goal_y',  0.0)
 
@@ -1061,6 +1110,10 @@ class MPCUAVNode(Node):
         self._gem_wheelbase_m      = max(0.1,  float(self.get_parameter('gem_wheelbase_m').value))
         self._gem_max_steering_rad = max(0.01, float(self.get_parameter('gem_max_steering_rad').value))
         self._gem_steering_kp      = max(0.0,  float(self.get_parameter('gem_steering_kp').value))
+        self._enable_debug_plot    = bool(self.get_parameter('enable_debug_plot').value)
+        self._debug_plot_rate_hz   = max(0.2,  float(self.get_parameter('debug_plot_rate_hz').value))
+        self._debug_plot_obs_max   = max(0,    int(self.get_parameter('debug_plot_obs_max').value))
+        self._debug_plot_backend   = str(self.get_parameter('debug_plot_backend').value)
 
         sensor_qos = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -1088,6 +1141,7 @@ class MPCUAVNode(Node):
         self._mpc_local_pred_pub = self.create_publisher(Path, LOCAL_PREDICTION_SEQUENCE_TOPIC, 10)
         self._lane_ref_pub       = self.create_publisher(Path, LANE_REFERENCE_TOPIC, 10)
         self._lane_mask_pub      = self.create_publisher(Image, LANE_MASK_TOPIC, 10)
+        self._lane_bev_mask_pub  = self.create_publisher(Image, LANE_BEV_MASK_TOPIC, 10)
         self._mpc_traj_pub       = self.create_publisher(PoseStamped, '/mpc/trajectory', 10)
         self._fresh_wp_pub       = self.create_publisher(PoseStamped, FRESH_COMMITTED_WAYPOINT_TOPIC, 10)
         self._exec_wp_pub        = self.create_publisher(PoseStamped, EXECUTED_COMMITTED_WAYPOINT_TOPIC, 10)
@@ -1098,7 +1152,11 @@ class MPCUAVNode(Node):
         self._depth2obs     = DepthToObstacles()
         self._bridge        = CvBridge()
         self._lane_detector = LaneCenterDetector(self, self._bridge) if self._enable_lane_tracking else None
-        self._debug_plotter = MPCDebugPlotter2D()
+        self._debug_plotter = MPCDebugPlotter2D(
+            enabled=self._enable_debug_plot,
+            rate_hz=self._debug_plot_rate_hz,
+            backend=self._debug_plot_backend,
+        )
 
         # ── state ────────────────────────────────────────────────────────────
         self._solver_executor: ThreadPoolExecutor = ThreadPoolExecutor(
@@ -1141,7 +1199,7 @@ class MPCUAVNode(Node):
         # ── timers ───────────────────────────────────────────────────────────
         self.create_timer(Ts, self._mpc_step)
         self.create_timer(PUBLISH_PERIOD_SEC, self._republish_latest_setpoint)
-        self.create_timer(1.0 / max(DEBUG_PLOT_RATE_HZ, 0.2), self._debug_plot_step)
+        self.create_timer(1.0 / self._debug_plot_rate_hz, self._debug_plot_step)
 
         if not self._enable_depth_camera:
             self.get_logger().warn(
@@ -1158,7 +1216,9 @@ class MPCUAVNode(Node):
             f'lidar_topic={self.get_parameter("lidar_topic").value} '
             f'enable_lane_tracking={self._enable_lane_tracking} '
             f'enable_depth_camera={self._enable_depth_camera} '
-            f'enable_lidar={self._enable_lidar}'
+            f'enable_lidar={self._enable_lidar} '
+            f'enable_debug_plot={self._enable_debug_plot} '
+            f'debug_plot_backend={self._debug_plot_backend}'
         )
         self.get_logger().info(
             f'lane_model_path={self.get_parameter("lane_model_path").value} '
@@ -1227,19 +1287,32 @@ class MPCUAVNode(Node):
         result = self._lane_detector.process(msg, self._yaw, self._x_state[:2])
         if result is None:
             return
+        self._publish_lane_debug_images(result, msg.header)
         self._lane_path_world        = np.asarray(result['path_world'], dtype=float)
         self._lane_confidence        = float(result['confidence'])
         self._lane_xte_m             = None if result['xte_m'] is None else float(result['xte_m'])
         self._lane_heading_error_rad = None if result['heading_error_rad'] is None else float(result['heading_error_rad'])
         self._lane_stamp_sec         = float(self.get_clock().now().nanoseconds) * 1e-9
         self._publish_lane_reference(self._lane_path_world, result['stamp'])
+
+    def _publish_lane_debug_images(self, result: dict, header) -> None:
         try:
             mask_msg = self._bridge.cv2_to_imgmsg(
                 np.asarray(result['mask'], dtype=np.uint8), encoding='mono8')
-            mask_msg.header = msg.header
+            mask_msg.header = header
             self._lane_mask_pub.publish(mask_msg)
-        except Exception:
-            pass
+        except Exception as exc:
+            self.get_logger().warn(f'Lane mask publish failed: {exc}')
+        bev_mask = result.get('bev_mask')
+        if bev_mask is None:
+            return
+        try:
+            bev_msg = self._bridge.cv2_to_imgmsg(
+                np.asarray(bev_mask, dtype=np.uint8), encoding='mono8')
+            bev_msg.header = header
+            self._lane_bev_mask_pub.publish(bev_msg)
+        except Exception as exc:
+            self.get_logger().warn(f'Lane BEV mask publish failed: {exc}')
 
     # ── MPC pipeline ─────────────────────────────────────────────────────────
 
@@ -1303,7 +1376,7 @@ class MPCUAVNode(Node):
             'goal_reached':     goal_reached,
             'goal_threshold_m': goal_threshold_m,
             'dist_goal':        dist_goal,
-            'obs_snapshot':     self._obs_map.snapshot(DEBUG_PLOT_OBS_MAX),
+            'obs_snapshot':     self._obs_map.snapshot(self._debug_plot_obs_max),
             'stamp_msg':        now.to_msg(),
             'u_warm':           self._U_warm.copy(),
             'x0':               x0,
@@ -1395,7 +1468,7 @@ class MPCUAVNode(Node):
 
         self._debug_plotter.submit(
             x0=res['x0'], x_ref=res['x_ref'], X_opt=res['X_opt'],
-            x_min=res['x_min_debug'],
+            x_min=res['x_min'],
             obs_pts=res['obs_snapshot'],
             goal_reached=bool(res['goal_reached']),
             dist_goal=float(res['dist_goal']),

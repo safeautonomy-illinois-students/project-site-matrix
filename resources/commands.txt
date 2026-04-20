@@ -59,3 +59,10 @@ cd /workspaces/project-site-matrix/mpc
 python3 build_native_backend.py
 
   sudo docker run -it --rm --name gem-fortress --network host --privileged --device=/dev/dri:/dev/dri -e DISPLAY=$DISPLAY -e QT_X11_NO_MITSHM=1 -e LIBGL_ALWAYS_SOFTWARE=0 -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v /home/prachit/Desktop/sem2/ece484/gem_simulator_fortress_docker:/workspaces/gem_simulator:rw -v /home/prachit/Desktop/sem2/ece484/project-site-matrix:/workspaces/project-site-matrix:rw gem-fortress bash
+  
+  
+  
+  cd /home/prachit2/project-site-matrix/mpc
+
+python3 mpc_optimal_planner.py --ros-args -p enable_depth_camera:=true -p enable_lidar:=true -p -p enable_lane_tracking:=true -p lane_model_path:=lane_Segmentation/data/checkpoints/epoch100.pth -p lane_bev_config_path:=lane_Segmentation/data/bev_config.json -p disable_obstacle_constraints:=false -p goal_reached_threshold_m:=0.5 -p goal_x:=32.91 -p goal_y:=0.0 -p mpc_solver_backend:=cpp_osqp -p enable_debug_plot:=true
+
