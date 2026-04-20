@@ -51,3 +51,11 @@ em_simulator.git
 
 
 sudo docker run -it --rm --name gem-fortress --network host --privileged --gpus all --device=/dev/dri:/dev/dri -e DISPLAY=$DISPLAY -e QT_X11_NO_MITSHM=1 -e LIBGL_ALWAYS_SOFTWARE=0 -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v /home/prachit/Desktop/sem2/ece484/gem_simulator_fortress_docker:/workspaces/gem_simulator:rw  -v /home/prachit/Desktop/sem2/ece484/project-site-matrix:/workspaces/project-site-matrix:rw  gem-fortress bash
+
+
+python3 mpc_optimal_planner.py --ros-args -p goal_x:=32.91 -p goal_y:=0.0 -p mpc_solver_backend:=cpp_osqp -p enable_depth_camera:=true \
+
+cd /workspaces/project-site-matrix/mpc
+python3 build_native_backend.py
+
+  sudo docker run -it --rm --name gem-fortress --network host --privileged --device=/dev/dri:/dev/dri -e DISPLAY=$DISPLAY -e QT_X11_NO_MITSHM=1 -e LIBGL_ALWAYS_SOFTWARE=0 -v /tmp/.X11-unix:/tmp/.X11-unix:rw -v /home/prachit/Desktop/sem2/ece484/gem_simulator_fortress_docker:/workspaces/gem_simulator:rw -v /home/prachit/Desktop/sem2/ece484/project-site-matrix:/workspaces/project-site-matrix:rw gem-fortress bash
