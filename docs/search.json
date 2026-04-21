@@ -4,7 +4,14 @@
     "href": "index.html",
     "title": "Project Matrix: Autonomous Robotaxi Summoning {Matrix}",
     "section": "",
-    "text": "A Full-Stack Autonomy Pipeline for the Polaris GEM e2: From GPS Summoning to Precision Parking\n\n\nPraise Daniels1, Sanath Nair1, Aryan Chauhan1, Prachit Gupta1\n\n\n1University of Illinois Urbana-Champaign | ECE 484: Principles of Safe Autonomy\n\n\n Technical Report  Simulation Demo  Codebase"
+    "text": "A Full-Stack Autonomy Pipeline for the Polaris GEM e2: From GPS Summoning to Precision Parking\n\n\nPraise Daniels1, Sanath Nair1, Aryan Chauhan1, Prachit Gupta1\n\n\n1University of Illinois Urbana-Champaign | ECE 484: Principles of Safe Autonomy\n\n\n\n Simulation Demo  Codebase"
+  },
+  {
+    "objectID": "index.html#project-progress",
+    "href": "index.html#project-progress",
+    "title": "Project Matrix: Autonomous Robotaxi Summoning {Matrix}",
+    "section": "Project progress",
+    "text": "Project progress\n\n\nWeek of Mar 23 - Safety training and simulation setup\n\nCompleted course safety training required for GEM field work\nSetup up GEM + highbay environment simulation for local testing\n\nMore Info\n\n\nWeek of Mar 30 - Code and workspace on the vehicle\n\nDeployed repositories and the ROS 2 workspace onto the GEM vehicle\n\nMore Info\n\n\nWeek of Apr 6 - Rosbags plus MPC and YOLO start\n\nBegan collecting vehicle rosbags for offline replay and tuning\nStarted MPC controller work and YOLO-based detection integrated with bag playback and sim\n\nMore Info\n\n\nWeek of Apr 13 - Logging issues, MPC and YOLO testing\n\nStill working to pull rosbags off the vehicle (issues transfering files off vehicle)\nContinued debugging and testing MPC and YOLO on bags and in closed-loop simulation\n\nMore Info\n\n\nWeek of Apr 20 - Finalize MPC and YOLO, test on rosbags\n\nFinalize MPC and YOLO for the integrated summon pipeline\nBegin testing on vehicle rosbags as soon as bags are available\n\nMore Info"
   },
   {
     "objectID": "index.html#abstract",
@@ -35,11 +42,39 @@
     "text": "Tentative Plan and Work Allocation\n\n\n\n\n\n\n\n\nEvaluation Item\nPlanned Method\nOwner(s)\n\n\n\n\nDetect the drivable region (lane following)\nUse a neural network to segment the lane, apply a bird’s-eye-view transformation, and recover the instantaneous lane geometry from the transformed scene.\nPraise\n\n\nGenerate waypoints to the destination location\nPerform curve fitting in the BEV frame and use MPC to generate both trajectory and control inputs, with obstacle avoidance and vehicle dynamics enforced through the constraints.\nAryan, Prachit\n\n\nEnsure the car stays in the drivable region for the entire journey\nEncode lane tracking through the MPC cost and maintain corridor consistency through explicit constraints on the predicted state.\nPrachit, Praise\n\n\nStop completely and automatically when an obstacle or stop sign is detected\nUse stereo-LiDAR sensor fusion for obstacle detection and distance estimation, together with YOLOv8-based stop-sign detection from the front stereo camera.\nSanath\n\n\nResume automatically once the obstacle is removed\nLet the planning layer resume motion only when the path is clear and a viable waypoint sequence can be generated again.\nAryan, Sanath\n\n\nStop within 2 m of the goal\nUse terminal planning and low-speed final approach logic to satisfy the stopping tolerance near the destination.\nPrachit"
   },
   {
-    "objectID": "index.html#video",
-    "href": "index.html#video",
+    "objectID": "index.html#progress-week-323",
+    "href": "index.html#progress-week-323",
     "title": "Project Matrix: Autonomous Robotaxi Summoning {Matrix}",
-    "section": "Simulator Setup Demo",
-    "text": "Simulator Setup Demo"
+    "section": "Week of March 23 - safety training and simulation",
+    "text": "Week of March 23 - safety training and simulation\n\nThis week focused on course safety training for work around the GEM and on simulation setup. The clip below walks through the simulator setup used for later MPC and perception pipelines."
+  },
+  {
+    "objectID": "index.html#progress-week-330",
+    "href": "index.html#progress-week-330",
+    "title": "Project Matrix: Autonomous Robotaxi Summoning {Matrix}",
+    "section": "Week of March 30 - onboard software on the GEM",
+    "text": "Week of March 30 - onboard software on the GEM\n\nSetup the gem_ws repository on the vehicle and testing that all the included scripts worked. In addition, verified that all the sensors and modules are properly working and begin brainstorming what sensors will be needed and how we would use them."
+  },
+  {
+    "objectID": "index.html#progress-week-406",
+    "href": "index.html#progress-week-406",
+    "title": "Project Matrix: Autonomous Robotaxi Summoning {Matrix}",
+    "section": "Week of April 6 - rosbags and MPC & YOLO development",
+    "text": "Week of April 6 - rosbags and MPC & YOLO development\n\nWe began recording vehicle rosbags for offline analysis and parallelized MPC tuning with YOLO-based detection work. The YOLO clip shows representative signage-style detections used to iterate on thresholds and throughput. The MPC clips contrast baseline lane tracking with obstacle-aware behavior (stop and resume when the corridor clears), which matches the summon-style requirements we are driving toward."
+  },
+  {
+    "objectID": "index.html#progress-week-413",
+    "href": "index.html#progress-week-413",
+    "title": "Project Matrix: Autonomous Robotaxi Summoning {Matrix}",
+    "section": "Week of April 13 - rosbag transfer, debugging, and testing",
+    "text": "Week of April 13 - rosbag transfer, debugging, and testing\n\nWe continued trying to get rosbags off the GEM reliably; we ran into issues with file trasnfer that resulted in three usb drives getting corrupted. In parallel we debugged and tested MPC and YOLO in the sim.\n\n\n\n\n\n\nNo Obstacle Avoidance\n\n\n\n\n\n\n\nObstacle Avoidance"
+  },
+  {
+    "objectID": "index.html#progress-week-420",
+    "href": "index.html#progress-week-420",
+    "title": "Project Matrix: Autonomous Robotaxi Summoning {Matrix}",
+    "section": "Week of April 20 - finalize MPC and YOLO, rosbag testing",
+    "text": "Week of April 20 - finalize MPC and YOLO, rosbag testing\n\nThis week we plan to finalize the MPC and YOLO branches so perception outputs and controller constraints line up with the summon requirements, then move from simulator-only checks to testing on vehicle rosbags as the primary regression loop. That includes stabilizing bag export from the GEM, replaying representative routes in the office, and closing any timing or topic mismatches before the next on-car session."
   },
   {
     "objectID": "index.html#references",
