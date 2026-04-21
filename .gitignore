@@ -1,2 +1,17 @@
 /.quarto/
 **/*.quarto_ipynb
+
+# Quarto Build Output
+# We ignore these because GitHub Actions builds the site automatically
+/docs/
+
+# Python / Jupyter / Data Science noise
+# (Useful since you are likely using Python for YOLO/MPC)
+.ipynb_checkpoints/
+__pycache__/
+venv/
+.env
+
+# OS-specific files
+.DS_Store
+Thumbs.db

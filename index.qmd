@@ -295,11 +295,34 @@ Obstacle Avoidance
 :::
 
 ::: {.section-container}
-## Week of April 20 - finalize MPC and YOLO, rosbag testing {#progress-week-420 .section-title}
+## Week of April 20 - finalize MPC and YOLO, rosbag testing, lane annotation, ERFNet fine-tuning, and BEV pipeline {#progress-week-420 .section-title}
 
 ::: {.content-text}
-This week we plan to finalize the MPC and YOLO branches so perception outputs and controller constraints line up with the summon requirements, then move from simulator-only checks to **testing on vehicle rosbags** as the primary regression loop. That includes stabilizing bag export from the GEM, replaying representative routes in the office, and closing any timing or topic mismatches before the next on-car session.
+This week we plan to finalize the MPC and YOLO branches so perception outputs and controller constraints line up with the summon requirements, then move from simulator-only checks to **testing on vehicle rosbags** as the primary regression loop. That includes stabilizing bag export from the GEM, replaying representative routes in the office, and closing any timing or topic mismatches before the next on-car session. In parallel, we plan to finalize the full lane-perception pipeline: image annotation, neural network fine-tuning, and bird's-eye-view (BEV) transformation.
 :::
+:::
+
+::: {.cvat-figure-grid}
+
+::: {.cvat-figure-item}
+::: {.figure-caption}
+Raw frame from the front-right camera loaded in CVAT
+:::
+![Raw GEM camera frame](static/images/cvat_raw_image.png){.cvat-figure width="50%"}
+:::
+
+::: {.cvat-figure-item}
+::: {.figure-caption}
+
+::: {.cvat-figure-item}
+::: {.figure-caption}
+Lane Mask Annotation
+:::
+![Annotation view](static/images/cvat_image_mask.png){.cvat-figure width="50%"}
+:::
+
+::: {.cvat-figure-item}
+::: {.figure-caption}
 
 ::: {.section-container}
 ## References {.section-title}
