@@ -502,10 +502,23 @@ body {
 }
 
 .mpc-flowchart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.mpc-flow-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: stretch;
   gap: 0.7rem;
+}
+
+.mpc-flow-row-bottom {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  max-width: 660px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .mpc-flow-step,
@@ -547,6 +560,28 @@ body {
   font-weight: 700;
 }
 
+.mpc-flow-drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+}
+
+.mpc-flow-drop-line {
+  width: 120px;
+  height: 0;
+  border-top: 2px dashed rgba(74, 108, 247, 0.35);
+}
+
+.mpc-flow-drop-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-link-hover);
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
 .mpc-cost-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -557,15 +592,27 @@ body {
   padding: 1rem 1rem 0.95rem;
 }
 
-.mpc-cost-card code {
-  display: inline-block;
-  margin-bottom: 0.55rem;
-  padding: 0.2rem 0.45rem;
-  border-radius: 999px;
-  background: rgba(74, 108, 247, 0.09);
-  color: var(--color-link-hover);
-  font-size: 0.86rem;
-  font-weight: 600;
+.mpc-cost-card p {
+  text-align: left;
+}
+
+.mpc-cost-card mjx-container[jax="CHTML"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  padding: 0.15rem 0 0.3rem;
+  font-size: 108% !important;
+}
+
+.mpc-cost-card mjx-container[display="true"] {
+  margin: 0.15rem 0 0.5rem !important;
+}
+
+.mpc-equation mjx-container[jax="CHTML"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  padding-bottom: 0.2rem;
 }
 
 .mpc-term-legend {
@@ -816,12 +863,25 @@ body {
   .mpc-compact {
     font-size: 0.93rem;
   }
+  .mpc-flow-row,
   .mpc-flowchart {
     grid-template-columns: 1fr;
   }
   .mpc-flow-arrow {
     transform: rotate(90deg);
     min-height: 20px;
+  }
+  .mpc-flow-row-bottom {
+    max-width: none;
+  }
+  .mpc-flow-drop {
+    flex-direction: column;
+  }
+  .mpc-flow-drop-line {
+    width: 0;
+    height: 26px;
+    border-top: none;
+    border-left: 2px dashed rgba(74, 108, 247, 0.35);
   }
   .mpc-equation {
     padding: 0.75rem 0.8rem 0.2rem;

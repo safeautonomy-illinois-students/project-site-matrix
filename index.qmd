@@ -189,6 +189,7 @@ We model lane tracking and goal reaching as a receding-horizon optimization prob
 ### MPC Flow in Plain Language {.subsection-title}
 
 ::: {.mpc-flowchart}
+::: {.mpc-flow-row}
 ::: {.mpc-flow-step}
 #### 1. Sense the scene
 Read odometry, lane-center estimates, stop-sign detections, and obstacle locations from the camera and LiDAR stack.
@@ -211,11 +212,17 @@ $\rightarrow$
 #### 3. Score each candidate plan
 Penalize plans that leave the lane center, use aggressive control, or finish far from the target.
 :::
-
-::: {.mpc-flow-arrow}
-$\rightarrow$
 :::
 
+::: {.mpc-flow-drop}
+::: {.mpc-flow-drop-line}
+:::
+::: {.mpc-flow-drop-arrow}
+$\downarrow$
+:::
+:::
+
+::: {.mpc-flow-row .mpc-flow-row-bottom}
 ::: {.mpc-flow-step}
 #### 4. Enforce safety constraints
 Reject plans that violate steering and acceleration limits, leave the drivable corridor, or get too close to obstacles.
@@ -261,28 +268,36 @@ The original problem is nonlinear because the vehicle dynamics and obstacle-dist
 ::: {.mpc-cost-grid}
 ::: {.mpc-cost-card}
 #### Tracking term
-`||x_k - x_ref,k||_Q^2`
+$$
+\|x_k - x_{ref,k}\|_Q^2
+$$
 
 This keeps the predicted state near the lane centerline and desired heading/speed. In simple terms, it asks the car to stay where the reference path says it should be.
 :::
 
 ::: {.mpc-cost-card}
 #### Control effort term
-`||u_k||_R^2`
+$$
+\|u_k\|_R^2
+$$
 
 This discourages unnecessarily large throttle, braking, or steering actions. It helps avoid aggressive commands that make the ride jerky or waste control authority.
 :::
 
 ::: {.mpc-cost-card}
 #### Smoothness term
-`||Δu_k||_S^2`
+$$
+\|\Delta u_k\|_S^2
+$$
 
 This penalizes sudden changes between one control input and the next. It is what makes the controller behave smoothly instead of oscillating or over-correcting.
 :::
 
 ::: {.mpc-cost-card}
 #### Terminal term
-`||x_N - x_goal||_P^2`
+$$
+\|x_N - x_{goal}\|_P^2
+$$
 
 This gives the optimizer a reason to finish the horizon pointed toward the final destination, not just do well over the next instant.
 :::
