@@ -494,6 +494,92 @@ body {
   line-height: 1.7;
 }
 
+.mpc-flowchart,
+.mpc-cost-grid,
+.mpc-term-legend {
+  max-width: 980px;
+  margin: 0 auto 1.1rem;
+}
+
+.mpc-flowchart {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0.7rem;
+}
+
+.mpc-flow-step,
+.mpc-cost-card,
+.mpc-term-item {
+  background:
+    linear-gradient(180deg, rgba(74, 108, 247, 0.08), rgba(74, 108, 247, 0.02)),
+    #ffffff;
+  border: 1px solid rgba(74, 108, 247, 0.14);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(44, 72, 160, 0.08);
+}
+
+.mpc-flow-step {
+  padding: 1rem 0.95rem;
+  text-align: left;
+}
+
+.mpc-flow-step h4,
+.mpc-cost-card h4 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  color: var(--color-heading);
+}
+
+.mpc-flow-step p,
+.mpc-cost-card p,
+.mpc-term-item p {
+  margin-bottom: 0;
+}
+
+.mpc-flow-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-link-hover);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.mpc-cost-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1rem;
+}
+
+.mpc-cost-card {
+  padding: 1rem 1rem 0.95rem;
+}
+
+.mpc-cost-card code {
+  display: inline-block;
+  margin-bottom: 0.55rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(74, 108, 247, 0.09);
+  color: var(--color-link-hover);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.mpc-term-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem;
+}
+
+.mpc-term-item {
+  padding: 0.85rem 0.95rem;
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+
 .mpc-equation {
   max-width: 860px;
   margin: 0.75rem auto 1rem;
@@ -729,6 +815,13 @@ body {
   }
   .mpc-compact {
     font-size: 0.93rem;
+  }
+  .mpc-flowchart {
+    grid-template-columns: 1fr;
+  }
+  .mpc-flow-arrow {
+    transform: rotate(90deg);
+    min-height: 20px;
   }
   .mpc-equation {
     padding: 0.75rem 0.8rem 0.2rem;

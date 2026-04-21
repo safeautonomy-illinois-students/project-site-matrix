@@ -186,6 +186,51 @@ Together, these modules provide the information flow needed for the summon task:
 We model lane tracking and goal reaching as a receding-horizon optimization problem. The reference state $x_{ref,k}$ is obtained from the lane centerline estimated using neural drivable-region segmentation, bird's-eye-view transformation, and polynomial fitting.
 :::
 
+### MPC Flow in Plain Language {.subsection-title}
+
+::: {.mpc-flowchart}
+::: {.mpc-flow-step}
+#### 1. Sense the scene
+Read odometry, lane-center estimates, stop-sign detections, and obstacle locations from the camera and LiDAR stack.
+:::
+
+::: {.mpc-flow-arrow}
+$\rightarrow$
+:::
+
+::: {.mpc-flow-step}
+#### 2. Build a short prediction
+Use the current vehicle state and a finite horizon to predict where the car could go over the next few seconds.
+:::
+
+::: {.mpc-flow-arrow}
+$\rightarrow$
+:::
+
+::: {.mpc-flow-step}
+#### 3. Score each candidate plan
+Penalize plans that leave the lane center, use aggressive control, or finish far from the target.
+:::
+
+::: {.mpc-flow-arrow}
+$\rightarrow$
+:::
+
+::: {.mpc-flow-step}
+#### 4. Enforce safety constraints
+Reject plans that violate steering and acceleration limits, leave the drivable corridor, or get too close to obstacles.
+:::
+
+::: {.mpc-flow-arrow}
+$\rightarrow$
+:::
+
+::: {.mpc-flow-step}
+#### 5. Apply only the first action
+Send the first safe command to the GEM, then repeat the full optimization at the next control tick with fresh measurements.
+:::
+:::
+
 ::: {.mpc-equation}
 $$
 \begin{aligned}
@@ -209,6 +254,64 @@ $$
 The cost penalizes lane-center deviation, control effort, and control variation, while the terminal term enforces convergence near the GPS goal. The constraints encode actuator bounds, locally linearized vehicle dynamics, drivable-region consistency, obstacle clearance, and the final stopping tolerance.
 
 The original problem is nonlinear because the vehicle dynamics and obstacle-distance constraints are nonlinear, and is therefore non-convex in its full form. For real-time deployment, we solve a locally linearized sparse quadratic program at each update. A warm-started solver such as **OSQP** is a good fit for this approximation because it is efficient for quadratic objectives with linear constraints, integrates cleanly with C++, and offers more predictable timing than a full nonlinear solve. The MPC optimization runs on a dedicated C++ thread, while ROS 2 callbacks independently update odometry, lane geometry, LiDAR obstacles, stereo depth, and stop-sign detections.
+:::
+
+### What the Cost Function Means {.subsection-title}
+
+::: {.mpc-cost-grid}
+::: {.mpc-cost-card}
+#### Tracking term
+`||x_k - x_ref,k||_Q^2`
+
+This keeps the predicted state near the lane centerline and desired heading/speed. In simple terms, it asks the car to stay where the reference path says it should be.
+:::
+
+::: {.mpc-cost-card}
+#### Control effort term
+`||u_k||_R^2`
+
+This discourages unnecessarily large throttle, braking, or steering actions. It helps avoid aggressive commands that make the ride jerky or waste control authority.
+:::
+
+::: {.mpc-cost-card}
+#### Smoothness term
+`||Δu_k||_S^2`
+
+This penalizes sudden changes between one control input and the next. It is what makes the controller behave smoothly instead of oscillating or over-correcting.
+:::
+
+::: {.mpc-cost-card}
+#### Terminal term
+`||x_N - x_goal||_P^2`
+
+This gives the optimizer a reason to finish the horizon pointed toward the final destination, not just do well over the next instant.
+:::
+:::
+
+::: {.mpc-term-legend}
+::: {.mpc-term-item}
+**State $x_k$**: the predicted vehicle position, velocity, and heading-related quantities at step $k$.
+:::
+
+::: {.mpc-term-item}
+**Reference $x_{ref,k}$**: the lane-center target generated from segmentation, BEV, and polynomial fitting.
+:::
+
+::: {.mpc-term-item}
+**Control $u_k$**: the command applied by the controller, such as acceleration and steering action.
+:::
+
+::: {.mpc-term-item}
+**$\Delta u_k$**: the difference between consecutive control commands, used to measure abruptness.
+:::
+
+::: {.mpc-term-item}
+**$Q, R, S, P$**: weighting matrices that decide how much the controller cares about tracking, effort, smoothness, and goal-reaching.
+:::
+:::
+
+::: {.content-text .mpc-compact}
+In the implementation, these weights become tuning knobs. Increasing $Q$ makes the car follow the lane reference more tightly, increasing $R$ makes it more conservative with control inputs, increasing $S$ makes the response smoother, and increasing $P$ makes the optimizer care more about ending the horizon near the destination.
 :::
 :::
 
